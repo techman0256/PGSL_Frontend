@@ -14,7 +14,9 @@ import ModulePage from './pages/ModulePage'
 
 function App() {
   return (
+     
     <BrowserRouter>
+      <BatchTest />
       <Routes>
         {/* Existing login and signup pages */}
         <Route path="/" element={<Login />} />
