@@ -129,20 +129,21 @@ export default function Sidebar() {
                 },
 
                 "&.active": {
-                  backgroundColor: "#e3e6eb",
-                  color: "#172033"
+                  backgroundColor: "#EBF3ED",
+                  color: "#2D5A43"
                 },
 
                 "&.active .MuiListItemIcon-root": {
-                  color: "#374151"
+                  color: "#2D5A43"
                 },
 
                 "&.active .MuiListItemText-primary": {
-                  fontWeight: 600
+                  fontWeight: 600,
+                  color: "#2D5A43"
                 },
 
                 "&:hover": {
-                  backgroundColor: "#f1f3f5"
+                  backgroundColor: "#F9FAFB"
                 }
               }}
             >

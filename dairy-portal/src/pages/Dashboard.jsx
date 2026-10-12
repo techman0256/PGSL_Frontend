@@ -22,7 +22,6 @@ import SearchIcon from "@mui/icons-material/Search";
 import TuneIcon from "@mui/icons-material/Tune";
 import Inventory2OutlinedIcon from "@mui/icons-material/Inventory2Outlined";
 import LocalShippingOutlinedIcon from "@mui/icons-material/LocalShippingOutlined";
-import ScienceOutlinedIcon from "@mui/icons-material/ScienceOutlined";
 import SettingsOutlinedIcon from "@mui/icons-material/SettingsOutlined";
 
 const summary = [

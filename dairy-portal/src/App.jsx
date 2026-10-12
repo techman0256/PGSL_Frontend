@@ -1,91 +1,110 @@
+import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 
-import {BrowserRouter, Routes, Route, Navigate} from 'react-router-dom'
+import { AuthProvider } from "./context/AuthContext";
+import DashboardLayout from "./components/DashboardLayout";
 
 import Dashboard from "./pages/Dashboard";
-import Login from './pages/Login'
-import Signup from './pages/Signup'
-import DashboardLayout from './components/DashboardLayout'
-import ModulePage from './pages/ModulePage'
+import Login from "./pages/Login";
+import Signup from "./pages/Signup";
+import MilkReception from "./pages/MilkReception";
+import QualityTesting from "./pages/QualityTesting";
+import RawMilkStorage from "./pages/RawMilkStorage";
+import MilkProcessing from "./pages/MilkProcessing";
+import InventoryManagement from "./pages/InventoryManagement";
+import DispatchManagement from "./pages/DispatchManagement";
+
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      staleTime: 1000 * 60,
+      retry: 1,
+      refetchOnWindowFocus: false,
+    },
+  },
+});
 
 function App() {
   return (
-     
-    <BrowserRouter>
-      <Routes>
-        {/* Existing login and signup pages */}
-        <Route path="/" element={<Login />} />
-        <Route path="/signup" element={<Signup />} />
+    <QueryClientProvider client={queryClient}>
+      <AuthProvider>
+        <BrowserRouter>
+          <Routes>
+            {/* Authentication routes */}
+            <Route path="/" element={<Login />} />
+            <Route path="/signup" element={<Signup />} />
 
-        {/* Dashboard and sidebar navigation */}
-        <Route
-          path="/dashboard"
-          element={
-          <DashboardLayout>
-          <Dashboard />
-          </DashboardLayout>
-        }
-      />
+            {/* Dashboard & Operational Stages with DashboardLayout */}
+            <Route
+              path="/dashboard"
+              element={
+                <DashboardLayout>
+                  <Dashboard />
+                </DashboardLayout>
+              }
+            />
 
-        <Route
-          path="/milk-reception"
-          element={
-            <DashboardLayout>
-              <ModulePage title="Milk Reception" />
-            </DashboardLayout>
-          }
-        />
+            <Route
+              path="/milk-reception"
+              element={
+                <DashboardLayout>
+                  <MilkReception />
+                </DashboardLayout>
+              }
+            />
 
-        <Route
-          path="/quality-testing"
-          element={
-            <DashboardLayout>
-              <ModulePage title="Quality Testing" />
-            </DashboardLayout>
-          }
-        />
+            <Route
+              path="/quality-testing"
+              element={
+                <DashboardLayout>
+                  <QualityTesting />
+                </DashboardLayout>
+              }
+            />
 
-        <Route
-          path="/raw-milk-storage"
-          element={
-            <DashboardLayout>
-              <ModulePage title="Raw Milk Storage" />
-            </DashboardLayout>
-          }
-        />
+            <Route
+              path="/raw-milk-storage"
+              element={
+                <DashboardLayout>
+                  <RawMilkStorage />
+                </DashboardLayout>
+              }
+            />
 
-        <Route
-          path="/processing"
-          element={
-            <DashboardLayout>
-              <ModulePage title="Processing" />
-            </DashboardLayout>
-          }
-        />
+            <Route
+              path="/processing"
+              element={
+                <DashboardLayout>
+                  <MilkProcessing />
+                </DashboardLayout>
+              }
+            />
 
-        <Route
-          path="/inventory"
-          element={
-            <DashboardLayout>
-              <ModulePage title="Inventory" />
-            </DashboardLayout>
-          }
-        />
+            <Route
+              path="/inventory"
+              element={
+                <DashboardLayout>
+                  <InventoryManagement />
+                </DashboardLayout>
+              }
+            />
 
-        <Route
-          path="/dispatch"
-          element={
-            <DashboardLayout>
-              <ModulePage title="Dispatch" />
-            </DashboardLayout>
-          }
-        />
+            <Route
+              path="/dispatch"
+              element={
+                <DashboardLayout>
+                  <DispatchManagement />
+                </DashboardLayout>
+              }
+            />
 
-        {/* Redirect unknown URLs to login */}
-        <Route path="*" element={<Navigate to="/" replace />}
-        />
-      </Routes>
-    </BrowserRouter>
-  )
+            {/* Catch-all redirect */}
+            <Route path="*" element={<Navigate to="/" replace />} />
+          </Routes>
+        </BrowserRouter>
+      </AuthProvider>
+    </QueryClientProvider>
+  );
 }
 
-export default App
+export default App;
