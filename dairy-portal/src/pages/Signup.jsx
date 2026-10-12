@@ -1,6 +1,3 @@
-
-
-
 import { useState } from "react";
 import { Link } from "react-router-dom";
 import {
@@ -19,8 +16,7 @@ import api from "../api/axios";
 
 function Signup() {
   const [formData, setFormData] = useState({
-    firstName: "",
-    lastName: "",
+    name: "",
     email: "",
     employeeId: "",
     role: "operator",
@@ -55,24 +51,18 @@ function Signup() {
     setLoading(true);
 
     try {
-      console.log("Calling API with data:", formData);
-      // const r1 = await api.get("/health")
-      // console.log("Health check response:", r1.data);
       const response = await api.post("/auth/register", {
-        name: `${formData.firstName.trim()} ${formData.lastName.trim()}`.trim(),
+        name: formData.name.trim(),
         email: formData.email.trim(),
         password: formData.password,
       });
 
-      const data = response.data;
-
       setSuccess("Account registered successfully!");
 
-      console.log("Registration response:", data);
+      console.log("Registration response:", response.data);
 
       setFormData({
-        firstName: "",
-        lastName: "",
+        name: "",
         email: "",
         employeeId: "",
         role: "operator",
@@ -121,11 +111,7 @@ function Signup() {
           PGSL
         </Typography>
 
-        <Typography
-          variant="h6"
-          textAlign="center"
-          sx={{ mt: 0.5 }}
-        >
+        <Typography variant="h6" textAlign="center" sx={{ mt: 0.5 }}>
           Create Account
         </Typography>
 
@@ -151,27 +137,15 @@ function Signup() {
         )}
 
         <Box component="form" onSubmit={handleSubmit}>
-          <Box sx={{ display: "flex", gap: 2 }}>
-            <TextField
-              fullWidth
-              required
-              name="firstName"
-              label="First Name"
-              value={formData.firstName}
-              onChange={handleChange}
-              margin="normal"
-            />
-
-            <TextField
-              fullWidth
-              required
-              name="lastName"
-              label="Last Name"
-              value={formData.lastName}
-              onChange={handleChange}
-              margin="normal"
-            />
-          </Box>
+          <TextField
+            fullWidth
+            required
+            name="name"
+            label="Full Name"
+            value={formData.name}
+            onChange={handleChange}
+            margin="normal"
+          />
 
           <TextField
             fullWidth
@@ -195,7 +169,6 @@ function Signup() {
 
           <FormControl fullWidth margin="normal">
             <InputLabel id="role-label">Role</InputLabel>
-
             <Select
               labelId="role-label"
               name="role"
@@ -203,18 +176,10 @@ function Signup() {
               label="Role"
               onChange={handleChange}
             >
-              <MenuItem value="operator">
-                Production Operator
-              </MenuItem>
-              <MenuItem value="supervisor">
-                Supervisor
-              </MenuItem>
-              <MenuItem value="quality">
-                Quality Control
-              </MenuItem>
-              <MenuItem value="manager">
-                Manager
-              </MenuItem>
+              <MenuItem value="operator">Production Operator</MenuItem>
+              <MenuItem value="supervisor">Supervisor</MenuItem>
+              <MenuItem value="quality">Quality Control</MenuItem>
+              <MenuItem value="manager">Manager</MenuItem>
             </Select>
           </FormControl>
 
