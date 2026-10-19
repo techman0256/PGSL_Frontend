@@ -152,11 +152,16 @@ export default function MilkProcessing() {
     return "Cow";
   }, [watchedBatchId, storageRecords]);
 
+  const handleProductTypeChange = (nextProduct) => {
+    setActiveTab(nextProduct);
+    setValue("unit", nextProduct === "Liquid Milk" ? "L" : "Kg");
+  };
+
   const handleAddTab = () => {
     const newName = prompt("Enter new product type name:");
     if (newName && !productTabs.includes(newName.trim())) {
       setProductTabs([...productTabs, newName.trim()]);
-      setActiveTab(newName.trim());
+      handleProductTypeChange(newName.trim());
     }
   };
 
@@ -385,58 +390,6 @@ export default function MilkProcessing() {
               />
             </Grid>
 
-            {/* Product Type Tabs / Pills */}
-            <Grid size={{ xs: 12 }}>
-              <Stack direction="row" spacing={1} flexWrap="wrap" sx={{ gap: 1 }}>
-                {productTabs.map((p) => {
-                  const isSelected = activeTab === p;
-                  return (
-                    <Button
-                      key={p}
-                      size="small"
-                      onClick={() => {
-                        setActiveTab(p);
-                        setValue("unit", p === "Liquid Milk" ? "L" : "Kg");
-                      }}
-                      sx={{
-                        textTransform: "none",
-                        fontSize: "12px",
-                        fontWeight: isSelected ? 600 : 400,
-                        bgcolor: isSelected ? "#EBF3ED" : "#FFFFFF",
-                        color: isSelected ? "#2D5A43" : "#374151",
-                        border: isSelected ? "1px solid #2D5A43" : "1px solid #D1D5DB",
-                        borderRadius: "6px",
-                        px: 1.8,
-                        py: 0.5,
-                        "&:hover": {
-                          bgcolor: isSelected ? "#EBF3ED" : "#F9FAFB",
-                        },
-                      }}
-                    >
-                      {p}
-                    </Button>
-                  );
-                })}
-                <Button
-                  size="small"
-                  onClick={handleAddTab}
-                  startIcon={<AddIcon fontSize="small" />}
-                  sx={{
-                    textTransform: "none",
-                    fontSize: "12px",
-                    color: "#4B5563",
-                    border: "1px dashed #9CA3AF",
-                    borderRadius: "6px",
-                    px: 1.5,
-                    py: 0.5,
-                    "&:hover": { bgcolor: "#F9FAFB" },
-                  }}
-                >
-                  Add tab
-                </Button>
-              </Stack>
-            </Grid>
-
             {/* Section: Raw Materials Used */}
             <Grid size={{ xs: 12 }}>
               <Box sx={{ p: 2, bgcolor: "#F9FAFB", borderRadius: "6px", border: "1px solid #E5E7EB" }}>
@@ -545,10 +498,41 @@ export default function MilkProcessing() {
               </Typography>
 
               <Box sx={{ mb: 2 }}>
-                <LockedField
-                  label="Product Type"
-                  value={activeTab}
-                />
+                <Typography sx={{ fontSize: "12px", fontWeight: 600, color: "#374151", mb: 0.5 }}>
+                  Product Type
+                </Typography>
+                <Stack direction={{ xs: "column", sm: "row" }} spacing={1} alignItems="stretch">
+                  <FormControl fullWidth size="small">
+                    <Select
+                      value={activeTab}
+                      onChange={(e) => handleProductTypeChange(e.target.value)}
+                      sx={{ borderRadius: "6px", fontSize: "13px", bgcolor: "#FFF" }}
+                    >
+                      {productTabs.map((p) => (
+                        <MenuItem key={p} value={p} sx={{ fontSize: "13px" }}>
+                          {p}
+                        </MenuItem>
+                      ))}
+                    </Select>
+                  </FormControl>
+                  <Button
+                    size="small"
+                    onClick={handleAddTab}
+                    startIcon={<AddIcon fontSize="small" />}
+                    sx={{
+                      textTransform: "none",
+                      fontSize: "12px",
+                      color: "#4B5563",
+                      border: "1px dashed #9CA3AF",
+                      borderRadius: "6px",
+                      minWidth: 120,
+                      whiteSpace: "nowrap",
+                      "&:hover": { bgcolor: "#F9FAFB" },
+                    }}
+                  >
+                    Add product
+                  </Button>
+                </Stack>
               </Box>
 
               <Grid container spacing={2}>
