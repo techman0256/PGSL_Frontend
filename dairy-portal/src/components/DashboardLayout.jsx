@@ -8,6 +8,8 @@ import {
   Menu,
   MenuItem,
   ButtonBase,
+  Snackbar,
+  Alert,
 } from "@mui/material";
 import KeyboardArrowDownIcon from "@mui/icons-material/KeyboardArrowDown";
 import LocalDrinkIcon from "@mui/icons-material/LocalDrink";
@@ -21,6 +23,7 @@ export default function DashboardLayout({ children }) {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
   const [anchorEl, setAnchorEl] = useState(null);
+  const [logoutError, setLogoutError] = useState("");
 
   const handleMenuOpen = (event) => {
     setAnchorEl(event.currentTarget);
@@ -30,10 +33,15 @@ export default function DashboardLayout({ children }) {
     setAnchorEl(null);
   };
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
     handleMenuClose();
-    logout();
-    navigate("/");
+    setLogoutError("");
+    try {
+      await logout();
+      navigate("/");
+    } catch (error) {
+      setLogoutError(error.response?.data?.message || "Could not sign out. Please try again.");
+    }
   };
 
   return (
@@ -138,6 +146,16 @@ export default function DashboardLayout({ children }) {
           {children}
         </Box>
       </Box>
+      <Snackbar
+        open={Boolean(logoutError)}
+        autoHideDuration={5000}
+        onClose={() => setLogoutError("")}
+        anchorOrigin={{ vertical: "bottom", horizontal: "right" }}
+      >
+        <Alert severity="error" variant="filled" onClose={() => setLogoutError("")}>
+          {logoutError}
+        </Alert>
+      </Snackbar>
     </Box>
   );
 }

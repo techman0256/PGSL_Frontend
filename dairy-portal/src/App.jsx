@@ -1,7 +1,9 @@
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { Box, CircularProgress } from "@mui/material";
 
 import { AuthProvider } from "./context/AuthContext";
+import useAuth from "./context/useAuth";
 import DashboardLayout from "./components/DashboardLayout";
 
 import Dashboard from "./pages/Dashboard";
@@ -24,6 +26,28 @@ const queryClient = new QueryClient({
   },
 });
 
+function SessionGate({ children, guestOnly = false }) {
+  const { user, isLoading } = useAuth();
+
+  if (isLoading) {
+    return (
+      <Box sx={{ minHeight: "100vh", display: "grid", placeItems: "center" }}>
+        <CircularProgress />
+      </Box>
+    );
+  }
+
+  if (guestOnly && user) {
+    return <Navigate to="/dashboard" replace />;
+  }
+
+  if (!guestOnly && !user) {
+    return <Navigate to="/" replace />;
+  }
+
+  return children;
+}
+
 function App() {
   return (
     <QueryClientProvider client={queryClient}>
@@ -31,70 +55,98 @@ function App() {
         <BrowserRouter>
           <Routes>
             {/* Authentication routes */}
-            <Route path="/" element={<Login />} />
-            <Route path="/signup" element={<Signup />} />
+            <Route
+              path="/"
+              element={
+                <SessionGate guestOnly>
+                  <Login />
+                </SessionGate>
+              }
+            />
+            <Route
+              path="/signup"
+              element={
+                <SessionGate guestOnly>
+                  <Signup />
+                </SessionGate>
+              }
+            />
 
             {/* Dashboard & Operational Stages with DashboardLayout */}
             <Route
               path="/dashboard"
               element={
-                <DashboardLayout>
-                  <Dashboard />
-                </DashboardLayout>
+                <SessionGate>
+                  <DashboardLayout>
+                    <Dashboard />
+                  </DashboardLayout>
+                </SessionGate>
               }
             />
 
             <Route
               path="/milk-reception"
               element={
-                <DashboardLayout>
-                  <MilkReception />
-                </DashboardLayout>
+                <SessionGate>
+                  <DashboardLayout>
+                    <MilkReception />
+                  </DashboardLayout>
+                </SessionGate>
               }
             />
 
             <Route
               path="/quality-testing"
               element={
-                <DashboardLayout>
-                  <QualityTesting />
-                </DashboardLayout>
+                <SessionGate>
+                  <DashboardLayout>
+                    <QualityTesting />
+                  </DashboardLayout>
+                </SessionGate>
               }
             />
 
             <Route
               path="/raw-milk-storage"
               element={
-                <DashboardLayout>
-                  <RawMilkStorage />
-                </DashboardLayout>
+                <SessionGate>
+                  <DashboardLayout>
+                    <RawMilkStorage />
+                  </DashboardLayout>
+                </SessionGate>
               }
             />
 
             <Route
               path="/processing"
               element={
-                <DashboardLayout>
-                  <MilkProcessing />
-                </DashboardLayout>
+                <SessionGate>
+                  <DashboardLayout>
+                    <MilkProcessing />
+                  </DashboardLayout>
+                </SessionGate>
               }
             />
 
             <Route
               path="/inventory"
               element={
-                <DashboardLayout>
-                  <InventoryManagement />
-                </DashboardLayout>
+                <SessionGate>
+                  <DashboardLayout>
+                    <InventoryManagement />
+                  </DashboardLayout>
+                </SessionGate>
               }
             />
 
             <Route
               path="/dispatch"
               element={
-                <DashboardLayout>
-                  <DispatchManagement />
-                </DashboardLayout>
+                <SessionGate>
+                  <DashboardLayout>
+                    <DispatchManagement />
+                  </DashboardLayout>
+                </SessionGate>
               }
             />
 

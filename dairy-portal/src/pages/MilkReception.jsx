@@ -20,6 +20,9 @@ import {
   Snackbar,
   Alert,
   InputAdornment,
+  MenuItem,
+  Select,
+  FormControl,
 } from "@mui/material";
 
 import CalendarTodayOutlinedIcon from "@mui/icons-material/CalendarTodayOutlined";
@@ -27,7 +30,6 @@ import AccessTimeOutlinedIcon from "@mui/icons-material/AccessTimeOutlined";
 import VisibilityOutlinedIcon from "@mui/icons-material/VisibilityOutlined";
 import DeleteOutlineOutlinedIcon from "@mui/icons-material/DeleteOutlineOutlined";
 
-import SegmentedToggle from "../components/common/SegmentedToggle";
 import LockedField from "../components/common/LockedField";
 import ContractNotice from "../components/common/ContractNotice";
 import RecordDetailsDialog from "../components/common/RecordDetailsDialog";
@@ -177,13 +179,20 @@ export default function MilkReception() {
               <Controller
                 name="milkType"
                 control={control}
+                rules={{ required: "Milk type is required" }}
                 render={({ field }) => (
-                  <SegmentedToggle
-                    options={MILK_TYPES}
-                    value={field.value}
-                    onChange={field.onChange}
-                    fullWidth
-                  />
+                  <FormControl fullWidth size="small" error={Boolean(errors.milkType)}>
+                    <Select
+                      {...field}
+                      sx={{ borderRadius: "6px", fontSize: "13px" }}
+                    >
+                      {MILK_TYPES.map((milkType) => (
+                        <MenuItem key={milkType} value={milkType} sx={{ fontSize: "13px" }}>
+                          {milkType}
+                        </MenuItem>
+                      ))}
+                    </Select>
+                  </FormControl>
                 )}
               />
             </Grid>
@@ -247,12 +256,18 @@ export default function MilkReception() {
                 name="shift"
                 control={control}
                 render={({ field }) => (
-                  <SegmentedToggle
-                    options={SHIFTS}
-                    value={field.value}
-                    onChange={field.onChange}
-                    fullWidth
-                  />
+                  <FormControl fullWidth size="small">
+                    <Select
+                      {...field}
+                      sx={{ borderRadius: "6px", fontSize: "13px" }}
+                    >
+                      {SHIFTS.map((shift) => (
+                        <MenuItem key={shift} value={shift} sx={{ fontSize: "13px" }}>
+                          {shift}
+                        </MenuItem>
+                      ))}
+                    </Select>
+                  </FormControl>
                 )}
               />
             </Grid>
@@ -475,4 +490,3 @@ export default function MilkReception() {
     </Box>
   );
 }
-

@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import {
   Box,
   Button,
@@ -15,6 +15,7 @@ import {
 import api from "../api/axios";
 
 function Signup() {
+  const navigate = useNavigate();
   const [formData, setFormData] = useState({
     name: "",
     email: "",
@@ -26,7 +27,6 @@ function Signup() {
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
-  const [success, setSuccess] = useState("");
 
   const handleChange = (event) => {
     const { name, value } = event.target;
@@ -41,7 +41,6 @@ function Signup() {
     event.preventDefault();
 
     setError("");
-    setSuccess("");
 
     if (formData.password !== formData.confirmPassword) {
       setError("Passwords do not match.");
@@ -51,23 +50,15 @@ function Signup() {
     setLoading(true);
 
     try {
-      const response = await api.post("/auth/register", {
+      await api.post("/auth/register", {
         name: formData.name.trim(),
         email: formData.email.trim(),
         password: formData.password,
       });
 
-      setSuccess("Account registered successfully!");
-
-      console.log("Registration response:", response.data);
-
-      setFormData({
-        name: "",
-        email: "",
-        employeeId: "",
-        role: "operator",
-        password: "",
-        confirmPassword: "",
+      navigate("/", {
+        replace: true,
+        state: { signupSuccess: "Account registered successfully. Please log in." },
       });
     } catch (err) {
       setError(
@@ -127,12 +118,6 @@ function Signup() {
         {error && (
           <Alert severity="error" sx={{ mb: 2 }}>
             {error}
-          </Alert>
-        )}
-
-        {success && (
-          <Alert severity="success" sx={{ mb: 2 }}>
-            {success}
           </Alert>
         )}
 
