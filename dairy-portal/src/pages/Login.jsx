@@ -35,6 +35,7 @@ function Login() {
       })
       const responseData = response.data?.data ?? response.data
       const authenticatedUser = responseData?.user ?? responseData?.profile ?? responseData
+      const token = responseData?.token ?? responseData?.accessToken ?? responseData?.jwt
       const name = authenticatedUser?.name || authenticatedUser?.fullName || email.trim()
 
       login({
@@ -47,7 +48,7 @@ function Login() {
           .slice(0, 2)
           .map((part) => part[0].toUpperCase())
           .join(''),
-      })
+      }, token)
       navigate('/dashboard', { replace: true })
     } catch (err) {
       setError(

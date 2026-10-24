@@ -15,6 +15,7 @@ import RawMilkStorage from "./pages/RawMilkStorage";
 import MilkProcessing from "./pages/MilkProcessing";
 import InventoryManagement from "./pages/InventoryManagement";
 import DispatchManagement from "./pages/DispatchManagement";
+import UsersManagement from "./pages/UsersManagement";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -46,6 +47,13 @@ function SessionGate({ children, guestOnly = false }) {
   }
 
   return children;
+}
+
+function AdminGate({ children }) {
+  const { user } = useAuth();
+  const isAdmin = user?.role?.toUpperCase() === "ADMIN";
+
+  return isAdmin ? children : <Navigate to="/dashboard" replace />;
 }
 
 function App() {
@@ -146,6 +154,19 @@ function App() {
                   <DashboardLayout>
                     <DispatchManagement />
                   </DashboardLayout>
+                </SessionGate>
+              }
+            />
+
+            <Route
+              path="/users"
+              element={
+                <SessionGate>
+                  <AdminGate>
+                    <DashboardLayout>
+                      <UsersManagement />
+                    </DashboardLayout>
+                  </AdminGate>
                 </SessionGate>
               }
             />

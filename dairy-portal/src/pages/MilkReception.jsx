@@ -30,7 +30,6 @@ import AccessTimeOutlinedIcon from "@mui/icons-material/AccessTimeOutlined";
 import VisibilityOutlinedIcon from "@mui/icons-material/VisibilityOutlined";
 import DeleteOutlineOutlinedIcon from "@mui/icons-material/DeleteOutlineOutlined";
 
-import LockedField from "../components/common/LockedField";
 import ContractNotice from "../components/common/ContractNotice";
 import RecordDetailsDialog from "../components/common/RecordDetailsDialog";
 import DeleteConfirmDialog from "../components/common/DeleteConfirmDialog";
@@ -39,10 +38,22 @@ import {
   getReceptions,
   createReception,
   deleteReception,
+  normalizeMilkBatch,
 } from "../services/receptionService";
+import { getBatchById } from "../services/batchApi";
 
 const MILK_TYPES = ["Cow", "Buffalo", "Goat", "Sahiwal"];
 const SHIFTS = ["Morning", "Evening"];
+
+const getLocalDate = () => {
+  const date = new Date();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${date.getFullYear()}-${month}-${day}`;
+};
+
+const getLocalTime = () =>
+  new Date().toTimeString().slice(0, 5);
 
 export default function MilkReception() {
   const queryClient = useQueryClient();
@@ -54,9 +65,18 @@ export default function MilkReception() {
   const {
     data: receptionQueryData,
     isLoading,
+    isError: receptionQueryFailed,
+    error: receptionQueryError,
   } = useQuery({
     queryKey: ["receptions"],
     queryFn: getReceptions,
+  });
+
+  const selectedBatchId = selectedRecord?.id;
+  const selectedBatchQuery = useQuery({
+    queryKey: ["milk-batch", selectedBatchId],
+    queryFn: () => getBatchById(selectedBatchId),
+    enabled: Boolean(selectedBatchId),
   });
 
   const receptions = receptionQueryData?.data || [];
@@ -71,11 +91,12 @@ export default function MilkReception() {
     formState: { errors },
   } = useForm({
     defaultValues: {
+      milkBatchId: "",
       milkType: "Cow",
       quantity: "1250",
-      date: "07 Oct 2026",
+      date: getLocalDate(),
       shift: "Morning",
-      time: "08:30 AM",
+      time: getLocalTime(),
       remarks: "",
     },
   });
@@ -91,11 +112,12 @@ export default function MilkReception() {
         severity: "success",
       });
       reset({
+        milkBatchId: "",
         milkType: "Cow",
         quantity: "",
-        date: "07 Oct 2026",
+        date: getLocalDate(),
         shift: "Morning",
-        time: "08:30 AM",
+        time: getLocalTime(),
         remarks: "",
       });
     },
@@ -146,6 +168,20 @@ export default function MilkReception() {
 
       {/* Contract / Endpoint Transparency Notice */}
       <ContractNotice notice={contractNotice} backendPersisted={backendPersisted} />
+      {receptionQueryFailed && (
+        <Alert severity="error" sx={{ mb: 2 }}>
+          {receptionQueryError.response?.data?.message ||
+            receptionQueryError.message ||
+            "Could not load milk batches."}
+        </Alert>
+      )}
+      {selectedBatchQuery.isError && (
+        <Alert severity="error" sx={{ mb: 2 }}>
+          {selectedBatchQuery.error.response?.data?.message ||
+            selectedBatchQuery.error.message ||
+            "Could not load the selected milk batch."}
+        </Alert>
+      )}
 
       {/* Form Card: New Milk Reception */}
       <Paper
@@ -166,9 +202,20 @@ export default function MilkReception() {
           <Grid container spacing={2.5}>
             {/* Row 1: Milk Batch ID & Milk Type */}
             <Grid size={{ xs: 12, md: 6 }}>
-              <LockedField
-                label="Milk Batch ID"
-                placeholder="Auto Generated"
+              <Typography sx={{ fontSize: "12px", fontWeight: 600, color: "#374151", mb: 0.5 }}>
+                Milk Batch ID
+              </Typography>
+              <TextField
+                fullWidth
+                size="small"
+                placeholder="e.g. MB-2026-000001"
+                {...register("milkBatchId", {
+                  required: "Milk batch ID is required",
+                  maxLength: { value: 64, message: "Milk batch ID is too long" },
+                })}
+                error={Boolean(errors.milkBatchId)}
+                helperText={errors.milkBatchId?.message}
+                sx={{ "& .MuiOutlinedInput-root": { borderRadius: "6px" } }}
               />
             </Grid>
 
@@ -230,6 +277,7 @@ export default function MilkReception() {
               <TextField
                 fullWidth
                 size="small"
+                type="date"
                 {...register("date", { required: "Date is required" })}
                 slotProps={{
                   input: {
@@ -280,6 +328,7 @@ export default function MilkReception() {
               <TextField
                 fullWidth
                 size="small"
+                type="time"
                 {...register("time", { required: "Time is required" })}
                 slotProps={{
                   input: {
@@ -460,7 +509,11 @@ export default function MilkReception() {
         open={Boolean(selectedRecord)}
         onClose={() => setSelectedRecord(null)}
         title="Milk Reception Batch Details"
-        data={selectedRecord}
+        data={
+          selectedBatchQuery.data
+            ? normalizeMilkBatch(selectedBatchQuery.data)
+            : selectedRecord
+        }
       />
 
       {/* Delete Confirmation */}

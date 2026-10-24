@@ -17,8 +17,10 @@ import StorageIcon from "@mui/icons-material/Storage";
 import SettingsIcon from "@mui/icons-material/Settings";
 import InventoryIcon from "@mui/icons-material/Inventory2";
 import LocalShippingIcon from "@mui/icons-material/LocalShipping";
+import PeopleAltIcon from "@mui/icons-material/PeopleAlt";
 
 import { NavLink } from "react-router-dom";
+import useAuth from "../context/useAuth";
 
 const drawerWidth = 220;
 const drawerHeight = 1008;
@@ -32,10 +34,16 @@ const menuItems = [
   { text: "Raw Milk Storage", path: "/raw-milk-storage", icon: <StorageIcon /> },
   { text: "Processing", path: "/processing", icon: <SettingsIcon /> },
   { text: "Inventory", path: "/inventory", icon: <InventoryIcon /> },
-  { text: "Dispatch", path: "/dispatch", icon: <LocalShippingIcon /> }
+  { text: "Dispatch", path: "/dispatch", icon: <LocalShippingIcon /> },
 ];
 
 export default function Sidebar() {
+  const { user } = useAuth();
+  const visibleMenuItems =
+    user?.role?.toUpperCase() === "ADMIN"
+      ? [...menuItems, { text: "User Management", path: "/users", icon: <PeopleAltIcon /> }]
+      : menuItems;
+
   return (
     <Drawer
       variant="permanent"
@@ -93,7 +101,7 @@ export default function Sidebar() {
             gap: "8px"
           }}
         >
-          {menuItems.map((item) => (
+          {visibleMenuItems.map((item) => (
             <ListItemButton
               key={item.path}
               component={NavLink}

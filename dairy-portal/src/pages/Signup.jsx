@@ -3,24 +3,20 @@ import { Link, useNavigate } from "react-router-dom";
 import {
   Box,
   Button,
-  FormControl,
-  InputLabel,
-  MenuItem,
-  Select,
   TextField,
   Typography,
   Alert,
 } from "@mui/material";
 
 import api from "../api/axios";
+import useAuth from "../context/useAuth";
 
 function Signup() {
   const navigate = useNavigate();
+  const { login } = useAuth();
   const [formData, setFormData] = useState({
     name: "",
     email: "",
-    employeeId: "",
-    role: "operator",
     password: "",
     confirmPassword: "",
   });
@@ -50,11 +46,32 @@ function Signup() {
     setLoading(true);
 
     try {
-      await api.post("/auth/register", {
+      const response = await api.post("/auth/register", {
         name: formData.name.trim(),
         email: formData.email.trim(),
         password: formData.password,
       });
+
+      const responseData = response.data?.data ?? response.data;
+      const registeredUser = responseData?.user ?? responseData?.profile;
+      const token = responseData?.token ?? responseData?.accessToken ?? responseData?.jwt;
+
+      if (token && registeredUser) {
+        const name = registeredUser.name || formData.name.trim();
+        login({
+          ...registeredUser,
+          name,
+          username: registeredUser.username || registeredUser.email || formData.email.trim(),
+          initials: name
+            .split(/\s+/)
+            .filter(Boolean)
+            .slice(0, 2)
+            .map((part) => part[0].toUpperCase())
+            .join(""),
+        }, token);
+        navigate("/dashboard", { replace: true });
+        return;
+      }
 
       navigate("/", {
         replace: true,
@@ -142,31 +159,6 @@ function Signup() {
             onChange={handleChange}
             margin="normal"
           />
-
-          <TextField
-            fullWidth
-            name="employeeId"
-            label="Employee ID"
-            value={formData.employeeId}
-            onChange={handleChange}
-            margin="normal"
-          />
-
-          <FormControl fullWidth margin="normal">
-            <InputLabel id="role-label">Role</InputLabel>
-            <Select
-              labelId="role-label"
-              name="role"
-              value={formData.role}
-              label="Role"
-              onChange={handleChange}
-            >
-              <MenuItem value="operator">Production Operator</MenuItem>
-              <MenuItem value="supervisor">Supervisor</MenuItem>
-              <MenuItem value="quality">Quality Control</MenuItem>
-              <MenuItem value="manager">Manager</MenuItem>
-            </Select>
-          </FormControl>
 
           <TextField
             fullWidth

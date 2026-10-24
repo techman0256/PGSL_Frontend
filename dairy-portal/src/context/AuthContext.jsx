@@ -29,6 +29,9 @@ export function AuthProvider({ children }) {
       } catch (error) {
         if (!isMounted) return;
         setUser(null);
+        if (error.response?.status === 401) {
+          sessionStorage.removeItem("authToken");
+        }
         if (error.response?.status !== 401) {
           setAuthError(
             error.response?.data?.message ||
@@ -50,11 +53,17 @@ export function AuthProvider({ children }) {
 
   const logout = async () => {
     await api.post("/auth/logout");
+    sessionStorage.removeItem("authToken");
     setUser(null);
     setAuthError("");
   };
 
-  const login = (userData) => {
+  const login = (userData, token) => {
+    if (token) {
+      sessionStorage.setItem("authToken", token);
+    } else {
+      sessionStorage.removeItem("authToken");
+    }
     setUser(userData);
     setAuthError("");
   };
