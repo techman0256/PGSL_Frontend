@@ -19,7 +19,7 @@ import {
   Typography,
 } from "@mui/material";
 import { createUser, getUsers, updateUserRole } from "../services/userService";
-import { ASSIGNABLE_ROLES, ROLES, getRoleLabel } from "../auth/roleAccess";
+import { ROLES, getRoleLabel } from "../auth/roleAccess";
 
 const initialForm = { name: "", email: "", password: "", role: "OPERATOR" };
 
