@@ -17,6 +17,7 @@ import {
   TableHead,
   TableRow,
 } from "@mui/material";
+"dashboard"
 
 import SearchIcon from "@mui/icons-material/Search";
 import TuneIcon from "@mui/icons-material/Tune";
