@@ -17,3 +17,11 @@ export const createUser = async (userData) => {
   const data = response.data?.data ?? response.data;
   return data?.user ?? data;
 };
+
+export const updateUserRole = async ({ userId, role }) => {
+  const response = await api.put(`/users/${encodeURIComponent(userId)}/role`, {
+    role,
+  });
+  const data = response.data?.data ?? response.data;
+  return data?.user ?? data;
+};

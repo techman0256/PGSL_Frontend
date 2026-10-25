@@ -23,6 +23,15 @@ export const createBatch = async (batchData) => {
   return data?.batch ?? data;
 };
 
+export const updateBatch = async (id, batchData) => {
+  const response = await api.put(
+    `/milk-batches/${encodeURIComponent(id)}`,
+    batchData
+  );
+  const data = response.data?.data ?? response.data;
+  return data?.batch ?? data;
+};
+
 export const getBatchById = async (id) => {
   const response = await api.get(`/milk-batches/${encodeURIComponent(id)}`);
   const data = response.data?.data ?? response.data;

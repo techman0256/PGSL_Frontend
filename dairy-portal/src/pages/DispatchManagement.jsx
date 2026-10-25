@@ -47,6 +47,12 @@ import { getInventory } from "../services/inventoryService";
 const CHANNEL_OPTIONS = ["Retail", "Wholesale", "Distributor"];
 const UNIT_OPTIONS = ["L", "Kg", "Units"];
 
+const getLocalDateTime = () => {
+  const date = new Date();
+  date.setMinutes(date.getMinutes() - date.getTimezoneOffset());
+  return date.toISOString().slice(0, 16);
+};
+
 const fallbackFinishedProducts = [
   { product: "Liquid Milk", quantity: 588, unit: "L", processingBatch: "MP-20261007-006" },
   { product: "Curd", quantity: 300, unit: "Kg", processingBatch: "MP-20261007-005" },
@@ -98,7 +104,7 @@ export default function DispatchManagement() {
       unit: "L",
       customer: "FreshMart Stores",
       channel: "Retail",
-      dispatchDateTime: "07 Oct 2026 · 03:00 PM",
+      dispatchDateTime: getLocalDateTime(),
     },
   });
 
@@ -133,13 +139,16 @@ export default function DispatchManagement() {
         unit: "L",
         customer: "",
         channel: "Retail",
-        dispatchDateTime: "07 Oct 2026 · 03:00 PM",
+        dispatchDateTime: getLocalDateTime(),
       });
     },
     onError: (err) => {
       setSnackbar({
         open: true,
-        message: err.message || "Failed to create dispatch",
+        message:
+          err.response?.data?.message ||
+          err.message ||
+          "Failed to create dispatch",
         severity: "error",
       });
     },
@@ -160,7 +169,10 @@ export default function DispatchManagement() {
     onError: (err) => {
       setSnackbar({
         open: true,
-        message: err.message || "Failed to delete dispatch",
+        message:
+          err.response?.data?.message ||
+          err.message ||
+          "Failed to delete dispatch",
         severity: "error",
       });
     },
@@ -360,6 +372,7 @@ export default function DispatchManagement() {
               <TextField
                 fullWidth
                 size="small"
+                type="datetime-local"
                 {...register("dispatchDateTime", { required: "Date & Time is required" })}
                 slotProps={{
                   input: {
@@ -588,4 +601,3 @@ export default function DispatchManagement() {
     </Box>
   );
 }
-

@@ -1,5 +1,47 @@
 import api from "../api/axios";
 
+const formatDispatchDateTime = (dispatch) => {
+  const date = new Date(dispatch.dispatchDate || dispatch.createdAt);
+
+  if (Number.isNaN(date.getTime())) {
+    return dispatch.dateTime || "";
+  }
+
+  const formattedDate = date.toLocaleDateString("en-GB", {
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+  });
+  const formattedTime = dispatch.dispatchTime
+    ? new Date(`2000-01-01T${dispatch.dispatchTime}`).toLocaleTimeString("en-US", {
+        hour: "2-digit",
+        minute: "2-digit",
+      })
+    : date.toLocaleTimeString("en-US", {
+        hour: "2-digit",
+        minute: "2-digit",
+      });
+
+  return `${formattedDate} · ${formattedTime}`;
+};
+
+const normalizeDispatch = (dispatch) => ({
+  ...dispatch,
+  id: dispatch._id || dispatch.id,
+  dateTime: formatDispatchDateTime(dispatch),
+});
+
+const getDispatchList = (responseData) => {
+  const data = responseData?.data ?? responseData;
+  const dispatches = data?.dispatches ?? data;
+
+  if (!Array.isArray(dispatches)) {
+    throw new Error("The dispatch response did not contain a dispatch list.");
+  }
+
+  return dispatches.map(normalizeDispatch);
+};
+
 // Initial seed data from Figma reference (Dispatch.jpg)
 let localDispatches = [
   {
@@ -85,7 +127,7 @@ let localDispatches = [
 export const getDispatches = async () => {
   try {
     const response = await api.get("/dispatches");
-    return { data: response.data?.data || response.data, backendPersisted: true };
+    return { data: getDispatchList(response.data), backendPersisted: true };
   } catch (err) {
     return {
       data: [...localDispatches],
@@ -96,44 +138,32 @@ export const getDispatches = async () => {
 };
 
 export const createDispatch = async (dispatchData) => {
-  try {
-    const response = await api.post("/dispatches", dispatchData);
-    return { data: response.data?.data || response.data, backendPersisted: true };
-  } catch (err) {
-    const nextSeq = String(localDispatches.length + 1).padStart(3, "0");
-    const newEntry = {
-      id: "ds-" + Date.now(),
-      dispatchId: dispatchData.dispatchId || `DS-20261007-${nextSeq}`,
-      dateTime: dispatchData.dispatchDateTime || "07 Oct 2026 · 03:00 PM",
-      product: dispatchData.product || "Liquid Milk",
-      quantity: Number(dispatchData.quantity) || 0,
-      unit: dispatchData.unit || "L",
-      channel: dispatchData.channel || "Retail",
-      customer: dispatchData.customer || "FreshMart Stores",
-      processingBatchId: dispatchData.processingBatchId || "MP-20261007-006",
-      status: "Dispatched",
-      createdAt: new Date().toISOString(),
-    };
-    localDispatches = [newEntry, ...localDispatches];
-    return {
-      data: newEntry,
-      backendPersisted: false,
-      contractNotice: `Endpoint /api/dispatches not available (${err.response?.status || err.message}); entry saved locally in session.`
-    };
+  const dispatchDate = new Date(dispatchData.dispatchDateTime);
+
+  if (Number.isNaN(dispatchDate.getTime())) {
+    throw new Error("Enter a valid dispatch date and time.");
   }
+
+  const response = await api.post("/dispatches", {
+    product: dispatchData.product,
+    processingBatchId: dispatchData.processingBatchId,
+    quantity: Number(dispatchData.quantity),
+    unit: dispatchData.unit,
+    customer: dispatchData.customer.trim(),
+    channel: dispatchData.channel,
+    dispatchDate: dispatchDate.toISOString(),
+    dispatchTime: dispatchDate.toTimeString().slice(0, 5),
+  });
+  const data = response.data?.data ?? response.data;
+  const dispatch = data?.dispatch ?? data;
+
+  return {
+    data: normalizeDispatch(dispatch),
+    backendPersisted: true,
+  };
 };
 
 export const deleteDispatch = async (id) => {
-  try {
-    const response = await api.delete(`/dispatches/${id}`);
-    return { data: response.data, backendPersisted: true };
-  } catch (err) {
-    localDispatches = localDispatches.filter((item) => item.id !== id && item.dispatchId !== id);
-    return {
-      data: { success: true, id },
-      backendPersisted: false,
-      contractNotice: `Endpoint /api/dispatches/:id not available (${err.response?.status || err.message}); entry removed from session.`
-    };
-  }
+  const response = await api.delete(`/dispatches/${encodeURIComponent(id)}`);
+  return { data: response.data, backendPersisted: true };
 };
-

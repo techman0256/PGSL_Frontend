@@ -29,6 +29,7 @@ import CalendarTodayOutlinedIcon from "@mui/icons-material/CalendarTodayOutlined
 import AccessTimeOutlinedIcon from "@mui/icons-material/AccessTimeOutlined";
 import VisibilityOutlinedIcon from "@mui/icons-material/VisibilityOutlined";
 import DeleteOutlineOutlinedIcon from "@mui/icons-material/DeleteOutlineOutlined";
+import EditOutlinedIcon from "@mui/icons-material/EditOutlined";
 
 import ContractNotice from "../components/common/ContractNotice";
 import RecordDetailsDialog from "../components/common/RecordDetailsDialog";
@@ -37,10 +38,13 @@ import DeleteConfirmDialog from "../components/common/DeleteConfirmDialog";
 import {
   getReceptions,
   createReception,
+  updateReception,
   deleteReception,
   normalizeMilkBatch,
 } from "../services/receptionService";
 import { getBatchById } from "../services/batchApi";
+import useAuth from "../context/useAuth";
+import { canDeleteOperationalRecords } from "../auth/roleAccess";
 
 const MILK_TYPES = ["Cow", "Buffalo", "Goat", "Sahiwal"];
 const SHIFTS = ["Morning", "Evening"];
@@ -57,9 +61,12 @@ const getLocalTime = () =>
 
 export default function MilkReception() {
   const queryClient = useQueryClient();
+  const { user } = useAuth();
+  const canDeleteBatches = canDeleteOperationalRecords(user?.role);
 
   const [selectedRecord, setSelectedRecord] = useState(null);
   const [deleteTargetId, setDeleteTargetId] = useState(null);
+  const [editingBatchId, setEditingBatchId] = useState(null);
   const [snackbar, setSnackbar] = useState({ open: false, message: "", severity: "success" });
 
   const {
@@ -130,6 +137,39 @@ export default function MilkReception() {
     },
   });
 
+  const updateMutation = useMutation({
+    mutationFn: updateReception,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["receptions"] });
+      queryClient.invalidateQueries({ queryKey: ["dashboard-data"] });
+      setEditingBatchId(null);
+      setSnackbar({
+        open: true,
+        message: "Milk batch updated successfully.",
+        severity: "success",
+      });
+      reset({
+        milkBatchId: "",
+        milkType: "Cow",
+        quantity: "",
+        date: getLocalDate(),
+        shift: "Morning",
+        time: getLocalTime(),
+        remarks: "",
+      });
+    },
+    onError: (err) => {
+      setSnackbar({
+        open: true,
+        message:
+          err.response?.data?.message ||
+          err.message ||
+          "Failed to update milk batch.",
+        severity: "error",
+      });
+    },
+  });
+
   const deleteMutation = useMutation({
     mutationFn: deleteReception,
     onSuccess: () => {
@@ -151,7 +191,32 @@ export default function MilkReception() {
   });
 
   const onSubmit = (formData) => {
-    createMutation.mutate(formData);
+    if (editingBatchId) {
+      updateMutation.mutate({ id: editingBatchId, ...formData });
+    } else {
+      createMutation.mutate(formData);
+    }
+  };
+
+  const startEditing = (batch) => {
+    const receivedAt = new Date(batch.receivedAt);
+    const date = Number.isNaN(receivedAt.getTime())
+      ? getLocalDate()
+      : `${receivedAt.getFullYear()}-${String(receivedAt.getMonth() + 1).padStart(2, "0")}-${String(receivedAt.getDate()).padStart(2, "0")}`;
+    const time = Number.isNaN(receivedAt.getTime())
+      ? getLocalTime()
+      : `${String(receivedAt.getHours()).padStart(2, "0")}:${String(receivedAt.getMinutes()).padStart(2, "0")}`;
+
+    setEditingBatchId(batch.id);
+    reset({
+      milkBatchId: batch.batchId,
+      milkType: batch.milkType,
+      quantity: String(batch.quantity),
+      date,
+      shift: batch.shift,
+      time,
+      remarks: batch.remarks || "",
+    });
   };
 
   return (
@@ -195,7 +260,7 @@ export default function MilkReception() {
         }}
       >
         <Typography sx={{ fontSize: "15px", fontWeight: 700, color: "#111827", mb: 2.5 }}>
-          New Milk Reception
+          {editingBatchId ? "Update Milk Batch" : "New Milk Reception"}
         </Typography>
 
         <form onSubmit={handleSubmit(onSubmit)}>
@@ -209,6 +274,7 @@ export default function MilkReception() {
                 fullWidth
                 size="small"
                 placeholder="e.g. MB-2026-000001"
+                disabled={Boolean(editingBatchId)}
                 {...register("milkBatchId", {
                   required: "Milk batch ID is required",
                   maxLength: { value: 64, message: "Milk batch ID is too long" },
@@ -359,7 +425,7 @@ export default function MilkReception() {
             <Button
               type="submit"
               variant="contained"
-              disabled={createMutation.isPending}
+              disabled={createMutation.isPending || updateMutation.isPending}
               sx={{
                 bgcolor: "#2D5A43",
                 "&:hover": { bgcolor: "#244835" },
@@ -373,12 +439,24 @@ export default function MilkReception() {
                 boxShadow: "none",
               }}
             >
-              {createMutation.isPending ? (
+              {createMutation.isPending || updateMutation.isPending ? (
                 <CircularProgress size={20} color="inherit" />
               ) : (
-                "Save Reception"
+                editingBatchId ? "Save Changes" : "Save Reception"
               )}
             </Button>
+            {editingBatchId && (
+              <Button
+                type="button"
+                onClick={() => {
+                  setEditingBatchId(null);
+                  reset();
+                }}
+                sx={{ ml: 1, textTransform: "none" }}
+              >
+                Cancel
+              </Button>
+            )}
           </Box>
         </form>
       </Paper>
@@ -480,15 +558,28 @@ export default function MilkReception() {
                           <VisibilityOutlinedIcon fontSize="small" />
                         </IconButton>
                       </Tooltip>
-                      <Tooltip title="Delete">
-                        <IconButton
-                          size="small"
-                          onClick={() => setDeleteTargetId(row.id || row.batchId)}
-                          sx={{ color: "#9CA3AF", "&:hover": { color: "#DC2626" } }}
-                        >
-                          <DeleteOutlineOutlinedIcon fontSize="small" />
-                        </IconButton>
-                      </Tooltip>
+                      {user?.role?.toUpperCase() !== "QUALITY_STAFF" && (
+                        <Tooltip title="Edit Batch">
+                          <IconButton
+                            size="small"
+                            onClick={() => startEditing(row)}
+                            sx={{ color: "#6B7280", "&:hover": { color: "#2D5A43" } }}
+                          >
+                            <EditOutlinedIcon fontSize="small" />
+                          </IconButton>
+                        </Tooltip>
+                      )}
+                      {canDeleteBatches && (
+                        <Tooltip title="Delete">
+                          <IconButton
+                            size="small"
+                            onClick={() => setDeleteTargetId(row.id || row.batchId)}
+                            sx={{ color: "#9CA3AF", "&:hover": { color: "#DC2626" } }}
+                          >
+                            <DeleteOutlineOutlinedIcon fontSize="small" />
+                          </IconButton>
+                        </Tooltip>
+                      )}
                     </TableCell>
                   </TableRow>
                 ))
@@ -517,12 +608,14 @@ export default function MilkReception() {
       />
 
       {/* Delete Confirmation */}
-      <DeleteConfirmDialog
-        open={Boolean(deleteTargetId)}
-        onClose={() => setDeleteTargetId(null)}
-        onConfirm={() => deleteMutation.mutate(deleteTargetId)}
-        loading={deleteMutation.isPending}
-      />
+      {canDeleteBatches && (
+        <DeleteConfirmDialog
+          open={Boolean(deleteTargetId)}
+          onClose={() => setDeleteTargetId(null)}
+          onConfirm={() => deleteMutation.mutate(deleteTargetId)}
+          loading={deleteMutation.isPending}
+        />
+      )}
 
       {/* Feedback Snackbar */}
       <Snackbar

@@ -44,13 +44,14 @@ import {
 import { getQualityTests } from "../services/qualityService";
 import { getReceptions } from "../services/receptionService";
 import useAuth from "../context/useAuth";
+import { canDeleteOperationalRecords } from "../auth/roleAccess";
 
 const SILOS = ["Silo 01", "Silo 02", "Silo 03", "Silo 04"];
 
 export default function RawMilkStorage() {
   const queryClient = useQueryClient();
   const { user } = useAuth();
-  const canDeleteStorageRecords = user?.username === "admin";
+  const canDeleteStorageRecords = canDeleteOperationalRecords(user?.role);
 
   const [selectedRecord, setSelectedRecord] = useState(null);
   const [deleteTargetId, setDeleteTargetId] = useState(null);

@@ -6,6 +6,8 @@ import {
   Button,
   CircularProgress,
   Paper,
+  MenuItem,
+  Select,
   Snackbar,
   Table,
   TableBody,
@@ -16,13 +18,15 @@ import {
   TextField,
   Typography,
 } from "@mui/material";
-import { createUser, getUsers } from "../services/userService";
+import { createUser, getUsers, updateUserRole } from "../services/userService";
+import { ASSIGNABLE_ROLES, ROLES, getRoleLabel } from "../auth/roleAccess";
 
-const initialForm = { name: "", email: "", password: "" };
+const initialForm = { name: "", email: "", password: "", role: "OPERATOR" };
 
 export default function UsersManagement() {
   const queryClient = useQueryClient();
   const [formData, setFormData] = useState(initialForm);
+  const [selectedRoles, setSelectedRoles] = useState({});
   const [feedback, setFeedback] = useState(null);
   const usersQuery = useQuery({
     queryKey: ["users"],
@@ -34,7 +38,7 @@ export default function UsersManagement() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["users"] });
       setFormData(initialForm);
-      setFeedback({ severity: "success", message: "Operator account created." });
+      setFeedback({ severity: "success", message: "User account created." });
     },
     onError: (error) => {
       setFeedback({
@@ -48,13 +52,30 @@ export default function UsersManagement() {
     },
   });
 
+  const updateRoleMutation = useMutation({
+    mutationFn: updateUserRole,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["users"] });
+      setFeedback({ severity: "success", message: "User role updated." });
+    },
+    onError: (error) => {
+      setFeedback({
+        severity: "error",
+        message:
+          error.response?.data?.message ||
+          error.message ||
+          "Could not update the user role.",
+      });
+    },
+  });
+
   const handleSubmit = (event) => {
     event.preventDefault();
     createUserMutation.mutate({
       name: formData.name.trim(),
       email: formData.email.trim(),
       password: formData.password,
-      role: "OPERATOR",
+      role: formData.role,
     });
   };
 
@@ -65,7 +86,7 @@ export default function UsersManagement() {
           User Management
         </Typography>
         <Typography sx={{ fontSize: "13px", color: "#6B7280" }}>
-          Create operator accounts and view registered users.
+          Create accounts, review role requests, and assign authorized roles.
         </Typography>
       </Box>
 
@@ -84,12 +105,12 @@ export default function UsersManagement() {
         sx={{ p: 3, mb: 3, border: "1px solid #E5E7EB", borderRadius: "8px" }}
       >
         <Typography sx={{ fontSize: "15px", fontWeight: 700, mb: 2 }}>
-          Create an operator
+          Create a user
         </Typography>
         <Box
           sx={{
             display: "grid",
-            gridTemplateColumns: { xs: "1fr", md: "repeat(3, 1fr)" },
+            gridTemplateColumns: { xs: "1fr", md: "repeat(4, 1fr)" },
             gap: 2,
             alignItems: "start",
           }}
@@ -128,6 +149,21 @@ export default function UsersManagement() {
             fullWidth
             size="small"
           />
+          <Select
+            value={formData.role}
+            onChange={(event) =>
+              setFormData((current) => ({ ...current, role: event.target.value }))
+            }
+            fullWidth
+            size="small"
+            aria-label="New user's role"
+          >
+            {ASSIGNABLE_ROLES.map((role) => (
+              <MenuItem key={role.value} value={role.value}>
+                {role.label}
+              </MenuItem>
+            ))}
+          </Select>
         </Box>
         <Box sx={{ display: "flex", justifyContent: "flex-end", mt: 2 }}>
           <Button
@@ -139,7 +175,7 @@ export default function UsersManagement() {
             {createUserMutation.isPending ? (
               <CircularProgress size={20} color="inherit" />
             ) : (
-              "Create Operator"
+              "Create User"
             )}
           </Button>
         </Box>
@@ -159,18 +195,19 @@ export default function UsersManagement() {
                 <TableCell>Email</TableCell>
                 <TableCell>Role</TableCell>
                 <TableCell>Status</TableCell>
+                <TableCell align="right">Role action</TableCell>
               </TableRow>
             </TableHead>
             <TableBody>
               {usersQuery.isLoading ? (
                 <TableRow>
-                  <TableCell colSpan={4} align="center" sx={{ py: 3 }}>
+                  <TableCell colSpan={5} align="center" sx={{ py: 3 }}>
                     <CircularProgress size={24} />
                   </TableCell>
                 </TableRow>
               ) : (usersQuery.data || []).length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={4} align="center" sx={{ py: 3 }}>
+                  <TableCell colSpan={5} align="center" sx={{ py: 3 }}>
                     No users found.
                   </TableCell>
                 </TableRow>
@@ -179,8 +216,49 @@ export default function UsersManagement() {
                   <TableRow key={user._id || user.id} hover>
                     <TableCell>{user.name}</TableCell>
                     <TableCell>{user.email}</TableCell>
-                    <TableCell>{user.role}</TableCell>
+                    <TableCell>{getRoleLabel(user.role)}</TableCell>
                     <TableCell>{user.isActive === false ? "Inactive" : "Active"}</TableCell>
+                    <TableCell align="right">
+                      <Box sx={{ display: "flex", justifyContent: "flex-end", gap: 1 }}>
+                        <Select
+                          size="small"
+                          value={
+                            selectedRoles[user._id || user.id] ||
+                            user.role
+                          }
+                          onChange={(event) =>
+                            setSelectedRoles((current) => ({
+                              ...current,
+                              [user._id || user.id]: event.target.value,
+                            }))
+                          }
+                          aria-label={`Role for ${user.name}`}
+                          sx={{ minWidth: 150, textAlign: "left" }}
+                        >
+                          {ROLES.map((role) => (
+                            <MenuItem key={role.value} value={role.value}>
+                              {role.label}
+                            </MenuItem>
+                          ))}
+                        </Select>
+                        <Button
+                          size="small"
+                          variant="outlined"
+                          disabled={updateRoleMutation.isPending}
+                          onClick={() =>
+                            updateRoleMutation.mutate({
+                              userId: user._id || user.id,
+                              role:
+                                selectedRoles[user._id || user.id] ||
+                                user.role,
+                            })
+                          }
+                          sx={{ textTransform: "none" }}
+                        >
+                          Assign
+                        </Button>
+                      </Box>
+                    </TableCell>
                   </TableRow>
                 ))
               )}

@@ -1,5 +1,5 @@
 import api from "../api/axios";
-import { createBatch, getBatches } from "./batchApi";
+import { createBatch, getBatches, updateBatch } from "./batchApi";
 
 const formatDate = (value) => {
   const date = new Date(value);
@@ -46,6 +46,21 @@ export const createReception = async (receptionData) => {
     milkType: receptionData.milkType.toUpperCase(),
     quantity: Number(receptionData.quantity),
     receivedAt: receivedAt.toISOString(),
+    date: receptionData.date,
+    time: receptionData.time,
+    shift: receptionData.shift.toUpperCase(),
+  });
+
+  return {
+    data: normalizeMilkBatch(batch),
+    backendPersisted: true,
+  };
+};
+
+export const updateReception = async ({ id, ...receptionData }) => {
+  const batch = await updateBatch(id, {
+    milkType: receptionData.milkType.toUpperCase(),
+    quantity: Number(receptionData.quantity),
     date: receptionData.date,
     time: receptionData.time,
     shift: receptionData.shift.toUpperCase(),

@@ -18,6 +18,7 @@ import PersonIcon from "@mui/icons-material/Person";
 import { useNavigate } from "react-router-dom";
 import Sidebar from "./Sidebar";
 import useAuth from "../context/useAuth";
+import { getRoleLabel } from "../auth/roleAccess";
 
 export default function DashboardLayout({ children }) {
   const { user, logout } = useAuth();
@@ -108,7 +109,7 @@ export default function DashboardLayout({ children }) {
                   {user?.initials || "AD"}
                 </Avatar>
                 <Typography sx={{ fontSize: "13px", fontWeight: 500, color: "#374151" }}>
-                  {user?.username === "admin" ? "Admin" : user?.name || "Admin"}
+                  {user?.name || getRoleLabel(user?.role)}
                 </Typography>
                 <KeyboardArrowDownIcon sx={{ fontSize: 16, color: "#9CA3AF" }} />
               </ButtonBase>

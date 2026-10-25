@@ -1,4 +1,39 @@
 import api from "../api/axios";
+import { normalizeMilkBatch } from "./receptionService";
+
+const formatDate = (value) => {
+  const date = new Date(value);
+
+  if (Number.isNaN(date.getTime())) return value || "";
+
+  return date.toLocaleDateString("en-GB", {
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+  });
+};
+
+const normalizeQualityTest = (test) => ({
+  ...test,
+  id: test._id || test.id,
+  batchId:
+    test.batchId ||
+    (typeof test.milkBatchId === "object"
+      ? test.milkBatchId?.milkBatchId
+      : test.milkBatchId),
+  testDate: formatDate(test.testDate),
+});
+
+const getTestList = (responseData) => {
+  const data = responseData?.data ?? responseData;
+  const tests = data?.tests ?? data;
+
+  if (!Array.isArray(tests)) {
+    throw new Error("The quality-test response did not contain a test list.");
+  }
+
+  return tests.map(normalizeQualityTest);
+};
 
 // Initial seed data from Figma reference (Milk processing plant.jpg)
 let localQualityTests = [
@@ -55,7 +90,7 @@ let localQualityTests = [
 export const getQualityTests = async () => {
   try {
     const response = await api.get("/quality-tests");
-    return { data: response.data?.data || response.data, backendPersisted: true };
+    return { data: getTestList(response.data), backendPersisted: true };
   } catch (err) {
     return {
       data: [...localQualityTests],
@@ -65,10 +100,26 @@ export const getQualityTests = async () => {
   }
 };
 
+export const getAvailableBatchesForTesting = async () => {
+  const response = await api.get("/quality-tests/available-batches");
+  const data = response.data?.data ?? response.data;
+  const batches = data?.batches ?? data;
+
+  if (!Array.isArray(batches)) {
+    throw new Error("The available-batches response did not contain a batch list.");
+  }
+
+  return batches.map(normalizeMilkBatch);
+};
+
 export const createQualityTest = async (testData) => {
   try {
     const response = await api.post("/quality-tests", testData);
-    return { data: response.data?.data || response.data, backendPersisted: true };
+    const data = response.data?.data ?? response.data;
+    return {
+      data: normalizeQualityTest(data?.test ?? data),
+      backendPersisted: true,
+    };
   } catch (err) {
     const newEntry = {
       id: "qt-" + Date.now(),
@@ -104,4 +155,3 @@ export const deleteQualityTest = async (id) => {
     };
   }
 };
-

@@ -36,13 +36,17 @@ import DeleteConfirmDialog from "../components/common/DeleteConfirmDialog";
 
 import {
   getQualityTests,
+  getAvailableBatchesForTesting,
   createQualityTest,
   deleteQualityTest,
 } from "../services/qualityService";
-import { getReceptions } from "../services/receptionService";
+import useAuth from "../context/useAuth";
+import { canDeleteOperationalRecords } from "../auth/roleAccess";
 
 export default function QualityTesting() {
   const queryClient = useQueryClient();
+  const { user } = useAuth();
+  const canDeleteTests = canDeleteOperationalRecords(user?.role);
 
   const [selectedRecord, setSelectedRecord] = useState(null);
   const [deleteTargetId, setDeleteTargetId] = useState(null);
@@ -56,21 +60,18 @@ export default function QualityTesting() {
     queryFn: getQualityTests,
   });
 
-  const { data: receptionsQueryData } = useQuery({
-    queryKey: ["receptions"],
-    queryFn: getReceptions,
+  const {
+    data: availableBatches = [],
+    isError: availableBatchesError,
+    error: availableBatchesErrorDetails,
+  } = useQuery({
+    queryKey: ["quality-test-available-batches"],
+    queryFn: getAvailableBatchesForTesting,
   });
 
   const tests = testsQueryData?.data || [];
   const backendPersisted = testsQueryData?.backendPersisted ?? false;
   const contractNotice = testsQueryData?.contractNotice;
-
-  const receptionBatches = receptionsQueryData?.data || [
-    { batchId: "MR-20261007-004" },
-    { batchId: "MR-20261007-003" },
-    { batchId: "MR-20261006-002" },
-    { batchId: "MR-20261006-001" },
-  ];
 
   const {
     register,
@@ -80,7 +81,7 @@ export default function QualityTesting() {
     formState: { errors },
   } = useForm({
     defaultValues: {
-      batchId: "MR-20261007-004",
+      batchId: "",
       fat: "3.80",
       snf: "8.50",
       temperature: "6.0",
@@ -94,6 +95,7 @@ export default function QualityTesting() {
     mutationFn: createQualityTest,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["quality-tests"] });
+      queryClient.invalidateQueries({ queryKey: ["quality-test-available-batches"] });
       queryClient.invalidateQueries({ queryKey: ["dashboard-data"] });
       setSnackbar({
         open: true,
@@ -101,7 +103,7 @@ export default function QualityTesting() {
         severity: "success",
       });
       reset({
-        batchId: receptionBatches[0]?.batchId || "",
+        batchId: "",
         fat: "",
         snf: "",
         temperature: "",
@@ -157,6 +159,13 @@ export default function QualityTesting() {
 
       {/* Contract / Endpoint Transparency Notice */}
       <ContractNotice notice={contractNotice} backendPersisted={backendPersisted} />
+      {availableBatchesError && (
+        <Alert severity="error" sx={{ mb: 2 }}>
+          {availableBatchesErrorDetails.response?.data?.message ||
+            availableBatchesErrorDetails.message ||
+            "Could not load batches ready for quality testing."}
+        </Alert>
+      )}
 
       {/* Form Card: Milk Quality Test */}
       <Paper
@@ -193,7 +202,10 @@ export default function QualityTesting() {
                         fontSize: "13px",
                       }}
                     >
-                      {receptionBatches.map((batch) => (
+                      <MenuItem value="" disabled sx={{ fontSize: "13px" }}>
+                        Select an available batch
+                      </MenuItem>
+                      {availableBatches.map((batch) => (
                         <MenuItem key={batch.batchId} value={batch.batchId} sx={{ fontSize: "13px" }}>
                           {batch.batchId}
                         </MenuItem>
@@ -465,15 +477,17 @@ export default function QualityTesting() {
                           <VisibilityOutlinedIcon fontSize="small" />
                         </IconButton>
                       </Tooltip>
-                      <Tooltip title="Delete">
-                        <IconButton
-                          size="small"
-                          onClick={() => setDeleteTargetId(row.id || row.batchId)}
-                          sx={{ color: "#9CA3AF", "&:hover": { color: "#DC2626" } }}
-                        >
-                          <DeleteOutlineOutlinedIcon fontSize="small" />
-                        </IconButton>
-                      </Tooltip>
+                      {canDeleteTests && (
+                        <Tooltip title="Delete">
+                          <IconButton
+                            size="small"
+                            onClick={() => setDeleteTargetId(row.id || row.batchId)}
+                            sx={{ color: "#9CA3AF", "&:hover": { color: "#DC2626" } }}
+                          >
+                            <DeleteOutlineOutlinedIcon fontSize="small" />
+                          </IconButton>
+                        </Tooltip>
+                      )}
                     </TableCell>
                   </TableRow>
                 ))
@@ -498,12 +512,14 @@ export default function QualityTesting() {
       />
 
       {/* Delete Confirmation */}
-      <DeleteConfirmDialog
-        open={Boolean(deleteTargetId)}
-        onClose={() => setDeleteTargetId(null)}
-        onConfirm={() => deleteMutation.mutate(deleteTargetId)}
-        loading={deleteMutation.isPending}
-      />
+      {canDeleteTests && (
+        <DeleteConfirmDialog
+          open={Boolean(deleteTargetId)}
+          onClose={() => setDeleteTargetId(null)}
+          onConfirm={() => deleteMutation.mutate(deleteTargetId)}
+          loading={deleteMutation.isPending}
+        />
+      )}
 
       {/* Feedback Snackbar */}
       <Snackbar
@@ -524,4 +540,3 @@ export default function QualityTesting() {
     </Box>
   );
 }
-

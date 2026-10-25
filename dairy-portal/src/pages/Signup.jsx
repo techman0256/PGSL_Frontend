@@ -3,20 +3,23 @@ import { Link, useNavigate } from "react-router-dom";
 import {
   Box,
   Button,
+  FormControl,
+  FormHelperText,
+  InputLabel,
+  MenuItem,
+  Select,
   TextField,
   Typography,
   Alert,
 } from "@mui/material";
-
 import api from "../api/axios";
-import useAuth from "../context/useAuth";
-
+import { ROLES } from "../auth/roleAccess";
 function Signup() {
   const navigate = useNavigate();
-  const { login } = useAuth();
   const [formData, setFormData] = useState({
     name: "",
     email: "",
+    role: "OPERATOR",
     password: "",
     confirmPassword: "",
   });
@@ -46,36 +49,20 @@ function Signup() {
     setLoading(true);
 
     try {
-      const response = await api.post("/auth/register", {
+      await api.post("/auth/register", {
         name: formData.name.trim(),
         email: formData.email.trim(),
         password: formData.password,
+        role: formData.role,
       });
 
-      const responseData = response.data?.data ?? response.data;
-      const registeredUser = responseData?.user ?? responseData?.profile;
-      const token = responseData?.token ?? responseData?.accessToken ?? responseData?.jwt;
-
-      if (token && registeredUser) {
-        const name = registeredUser.name || formData.name.trim();
-        login({
-          ...registeredUser,
-          name,
-          username: registeredUser.username || registeredUser.email || formData.email.trim(),
-          initials: name
-            .split(/\s+/)
-            .filter(Boolean)
-            .slice(0, 2)
-            .map((part) => part[0].toUpperCase())
-            .join(""),
-        }, token);
-        navigate("/dashboard", { replace: true });
-        return;
-      }
-
+      const requestedRoleLabel =
+        ROLES.find((role) => role.value === formData.role)?.label || "Operator";
       navigate("/", {
         replace: true,
-        state: { signupSuccess: "Account registered successfully. Please log in." },
+        state: {
+          signupSuccess: `${requestedRoleLabel} account registered successfully. You can log in with your selected role.`,
+        },
       });
     } catch (err) {
       setError(
@@ -148,6 +135,26 @@ function Signup() {
             onChange={handleChange}
             margin="normal"
           />
+
+          <FormControl fullWidth margin="normal">
+            <InputLabel id="signup-role-label">Account Role</InputLabel>
+            <Select
+              labelId="signup-role-label"
+              name="role"
+              value={formData.role}
+              label="Account Role"
+              onChange={handleChange}
+            >
+              {ROLES.map((role) => (
+                <MenuItem key={role.value} value={role.value}>
+                  {role.label}
+                </MenuItem>
+              ))}
+            </Select>
+            <FormHelperText>
+              Your selected role is active immediately. Admin accounts are created by existing administrators.
+            </FormHelperText>
+          </FormControl>
 
           <TextField
             fullWidth

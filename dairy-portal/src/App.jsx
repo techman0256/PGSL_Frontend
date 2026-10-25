@@ -16,6 +16,7 @@ import MilkProcessing from "./pages/MilkProcessing";
 import InventoryManagement from "./pages/InventoryManagement";
 import DispatchManagement from "./pages/DispatchManagement";
 import UsersManagement from "./pages/UsersManagement";
+import { canAccessModule } from "./auth/roleAccess";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -49,11 +50,12 @@ function SessionGate({ children, guestOnly = false }) {
   return children;
 }
 
-function AdminGate({ children }) {
+function RoleGate({ children, module }) {
   const { user } = useAuth();
-  const isAdmin = user?.role?.toUpperCase() === "ADMIN";
 
-  return isAdmin ? children : <Navigate to="/dashboard" replace />;
+  return canAccessModule(user?.role, module)
+    ? children
+    : <Navigate to="/dashboard" replace />;
 }
 
 function App() {
@@ -85,9 +87,11 @@ function App() {
               path="/dashboard"
               element={
                 <SessionGate>
-                  <DashboardLayout>
-                    <Dashboard />
-                  </DashboardLayout>
+                  <RoleGate module="dashboard">
+                    <DashboardLayout>
+                      <Dashboard />
+                    </DashboardLayout>
+                  </RoleGate>
                 </SessionGate>
               }
             />
@@ -96,9 +100,11 @@ function App() {
               path="/milk-reception"
               element={
                 <SessionGate>
-                  <DashboardLayout>
-                    <MilkReception />
-                  </DashboardLayout>
+                  <RoleGate module="milk-reception">
+                    <DashboardLayout>
+                      <MilkReception />
+                    </DashboardLayout>
+                  </RoleGate>
                 </SessionGate>
               }
             />
@@ -107,9 +113,11 @@ function App() {
               path="/quality-testing"
               element={
                 <SessionGate>
-                  <DashboardLayout>
-                    <QualityTesting />
-                  </DashboardLayout>
+                  <RoleGate module="quality-testing">
+                    <DashboardLayout>
+                      <QualityTesting />
+                    </DashboardLayout>
+                  </RoleGate>
                 </SessionGate>
               }
             />
@@ -118,9 +126,11 @@ function App() {
               path="/raw-milk-storage"
               element={
                 <SessionGate>
-                  <DashboardLayout>
-                    <RawMilkStorage />
-                  </DashboardLayout>
+                  <RoleGate module="raw-milk-storage">
+                    <DashboardLayout>
+                      <RawMilkStorage />
+                    </DashboardLayout>
+                  </RoleGate>
                 </SessionGate>
               }
             />
@@ -129,9 +139,11 @@ function App() {
               path="/processing"
               element={
                 <SessionGate>
-                  <DashboardLayout>
-                    <MilkProcessing />
-                  </DashboardLayout>
+                  <RoleGate module="processing">
+                    <DashboardLayout>
+                      <MilkProcessing />
+                    </DashboardLayout>
+                  </RoleGate>
                 </SessionGate>
               }
             />
@@ -140,9 +152,11 @@ function App() {
               path="/inventory"
               element={
                 <SessionGate>
-                  <DashboardLayout>
-                    <InventoryManagement />
-                  </DashboardLayout>
+                  <RoleGate module="inventory">
+                    <DashboardLayout>
+                      <InventoryManagement />
+                    </DashboardLayout>
+                  </RoleGate>
                 </SessionGate>
               }
             />
@@ -151,9 +165,11 @@ function App() {
               path="/dispatch"
               element={
                 <SessionGate>
-                  <DashboardLayout>
-                    <DispatchManagement />
-                  </DashboardLayout>
+                  <RoleGate module="dispatch">
+                    <DashboardLayout>
+                      <DispatchManagement />
+                    </DashboardLayout>
+                  </RoleGate>
                 </SessionGate>
               }
             />
@@ -162,11 +178,11 @@ function App() {
               path="/users"
               element={
                 <SessionGate>
-                  <AdminGate>
+                  <RoleGate module="users">
                     <DashboardLayout>
                       <UsersManagement />
                     </DashboardLayout>
-                  </AdminGate>
+                  </RoleGate>
                 </SessionGate>
               }
             />
