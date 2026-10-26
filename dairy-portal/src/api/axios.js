@@ -10,14 +10,36 @@ const api = axios.create({
   withCredentials: true,
 });
 
-api.interceptors.request.use((config) => {
-  const token = sessionStorage.getItem("authToken");
+let refreshRequest;
 
-  if (token) {
-    config.headers.Authorization = `Bearer ${token}`;
+api.interceptors.response.use(
+  (response) => response,
+  async (error) => {
+    const originalRequest = error.config;
+    const isAuthRequest = /\/auth\/(login|register|refresh|logout)/.test(
+      originalRequest?.url || ""
+    );
+
+    if (
+      error.response?.status !== 401 ||
+      originalRequest?._retry ||
+      isAuthRequest
+    ) {
+      return Promise.reject(error);
+    }
+
+    originalRequest._retry = true;
+    refreshRequest ||= api.post("/auth/refresh", undefined, {
+      _skipAuthRefresh: true,
+    });
+
+    try {
+      await refreshRequest;
+      return api(originalRequest);
+    } finally {
+      refreshRequest = undefined;
+    }
   }
-
-  return config;
-});
+);
 
 export default api;

@@ -10,7 +10,11 @@ import {
   TextField,
   Typography,
   Alert,
+  IconButton,
+  InputAdornment,
 } from '@mui/material'
+import Visibility from '@mui/icons-material/Visibility'
+import VisibilityOff from '@mui/icons-material/VisibilityOff'
 import api from '../api/axios'
 import endpoints from '../api/endpoints'
 import useAuth from '../context/useAuth'
@@ -21,6 +25,7 @@ function Login() {
   const { login, authError } = useAuth()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
+  const [showPassword, setShowPassword] = useState(false)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
 
@@ -36,7 +41,6 @@ function Login() {
       })
       const responseData = response.data?.data ?? response.data
       const authenticatedUser = responseData?.user ?? responseData?.profile ?? responseData
-      const token = responseData?.token ?? responseData?.accessToken ?? responseData?.jwt
       const name = authenticatedUser?.name || authenticatedUser?.fullName || email.trim()
 
       login({
@@ -49,7 +53,7 @@ function Login() {
           .slice(0, 2)
           .map((part) => part[0].toUpperCase())
           .join(''),
-      }, token)
+      })
       navigate('/dashboard', { replace: true })
     } catch (err) {
       setError(
@@ -142,11 +146,42 @@ function Login() {
             fullWidth
             required
             label="Password"
-            type="password"
+            type={showPassword ? 'text' : 'password'}
             autoComplete="current-password"
             value={password}
             onChange={(event) => setPassword(event.target.value)}
             margin="normal"
+            slotProps={{
+              input: {
+                endAdornment: (
+                  <InputAdornment position="end">
+                    <IconButton
+                      aria-label="Hold to show password"
+                      onMouseDown={() => setShowPassword(true)}
+                      onMouseUp={() => setShowPassword(false)}
+                      onMouseLeave={() => setShowPassword(false)}
+                      onTouchStart={() => setShowPassword(true)}
+                      onTouchEnd={() => setShowPassword(false)}
+                      onKeyDown={(event) => {
+                        if (event.key === 'Enter' || event.key === ' ') {
+                          event.preventDefault()
+                          setShowPassword(true)
+                        }
+                      }}
+                      onKeyUp={(event) => {
+                        if (event.key === 'Enter' || event.key === ' ') {
+                          setShowPassword(false)
+                        }
+                      }}
+                      onBlur={() => setShowPassword(false)}
+                      edge="end"
+                    >
+                      {showPassword ? <VisibilityOff /> : <Visibility />}
+                    </IconButton>
+                  </InputAdornment>
+                ),
+              },
+            }}
           />
 
           <FormControlLabel

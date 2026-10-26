@@ -511,7 +511,7 @@ export default function MilkReception() {
                           <VisibilityOutlinedIcon fontSize="small" />
                         </IconButton>
                       </Tooltip>
-                      {user?.role?.toUpperCase() !== "QUALITY_STAFF" && (
+                      {user?.role?.toUpperCase() === "ADMIN" && (
                         <Tooltip title="Edit Batch">
                           <IconButton
                             size="small"

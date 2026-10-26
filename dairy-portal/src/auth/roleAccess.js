@@ -1,8 +1,6 @@
 export const ROLES = [
-  { value: "MANAGER", label: "Manager" },
   { value: "OPERATOR", label: "Operator" },
   { value: "ADMIN", label: "Admin" },
-  { value: "QUALITY_STAFF", label: "Quality Staff" },
 ];
 
 // export const ASSIGNABLE_ROLES = [
@@ -18,11 +16,10 @@ const allModules = [
   "processing",
   "inventory",
   "dispatch",
-  // "users",
 ];
 
 const moduleAccess = {
-  ADMIN: allModules,
+  ADMIN: [...allModules, "users"],
   OPERATOR: allModules,
 };
 

@@ -3,30 +3,29 @@ import { Link, useNavigate } from "react-router-dom";
 import {
   Box,
   Button,
-  FormControl,
-  FormHelperText,
-  InputLabel,
-  MenuItem,
-  Select,
   TextField,
   Typography,
   Alert,
+  IconButton,
+  InputAdornment,
 } from "@mui/material";
+import Visibility from "@mui/icons-material/Visibility";
+import VisibilityOff from "@mui/icons-material/VisibilityOff";
 import api from "../api/axios";
 import endpoints from "../api/endpoints";
-import { ROLES } from "../auth/roleAccess";
 function Signup() {
   const navigate = useNavigate();
   const [formData, setFormData] = useState({
     name: "",
     email: "",
-    role: "OPERATOR",
     password: "",
     confirmPassword: "",
   });
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
   const handleChange = (event) => {
     const { name, value } = event.target;
@@ -54,15 +53,12 @@ function Signup() {
         name: formData.name.trim(),
         email: formData.email.trim(),
         password: formData.password,
-        role: formData.role,
       });
 
-      const requestedRoleLabel =
-        ROLES.find((role) => role.value === formData.role)?.label || "Operator";
       navigate("/", {
         replace: true,
         state: {
-          signupSuccess: `${requestedRoleLabel} account registered successfully. You can log in with your selected role.`,
+          signupSuccess: "Operator account registered successfully. You can log in now.",
         },
       });
     } catch (err) {
@@ -137,26 +133,6 @@ function Signup() {
             margin="normal"
           />
 
-          <FormControl fullWidth margin="normal">
-            <InputLabel id="signup-role-label">Account Role</InputLabel>
-            <Select
-              labelId="signup-role-label"
-              name="role"
-              value={formData.role}
-              label="Account Role"
-              onChange={handleChange}
-            >
-              {ROLES.map((role) => (
-                <MenuItem key={role.value} value={role.value}>
-                  {role.label}
-                </MenuItem>
-              ))}
-            </Select>
-            <FormHelperText>
-              Your selected role is active immediately. Admin accounts are created by existing administrators.
-            </FormHelperText>
-          </FormControl>
-
           <TextField
             fullWidth
             required
@@ -173,10 +149,41 @@ function Signup() {
             required
             name="password"
             label="Password"
-            type="password"
+            type={showPassword ? "text" : "password"}
             value={formData.password}
             onChange={handleChange}
             margin="normal"
+            slotProps={{
+              input: {
+                endAdornment: (
+                  <InputAdornment position="end">
+                    <IconButton
+                      aria-label="Hold to show password"
+                      onMouseDown={() => setShowPassword(true)}
+                      onMouseUp={() => setShowPassword(false)}
+                      onMouseLeave={() => setShowPassword(false)}
+                      onTouchStart={() => setShowPassword(true)}
+                      onTouchEnd={() => setShowPassword(false)}
+                      onKeyDown={(event) => {
+                        if (event.key === "Enter" || event.key === " ") {
+                          event.preventDefault();
+                          setShowPassword(true);
+                        }
+                      }}
+                      onKeyUp={(event) => {
+                        if (event.key === "Enter" || event.key === " ") {
+                          setShowPassword(false);
+                        }
+                      }}
+                      onBlur={() => setShowPassword(false)}
+                      edge="end"
+                    >
+                      {showPassword ? <VisibilityOff /> : <Visibility />}
+                    </IconButton>
+                  </InputAdornment>
+                ),
+              },
+            }}
           />
 
           <TextField
@@ -184,10 +191,41 @@ function Signup() {
             required
             name="confirmPassword"
             label="Confirm Password"
-            type="password"
+            type={showConfirmPassword ? "text" : "password"}
             value={formData.confirmPassword}
             onChange={handleChange}
             margin="normal"
+            slotProps={{
+              input: {
+                endAdornment: (
+                  <InputAdornment position="end">
+                    <IconButton
+                      aria-label="Hold to show confirm password"
+                      onMouseDown={() => setShowConfirmPassword(true)}
+                      onMouseUp={() => setShowConfirmPassword(false)}
+                      onMouseLeave={() => setShowConfirmPassword(false)}
+                      onTouchStart={() => setShowConfirmPassword(true)}
+                      onTouchEnd={() => setShowConfirmPassword(false)}
+                      onKeyDown={(event) => {
+                        if (event.key === "Enter" || event.key === " ") {
+                          event.preventDefault();
+                          setShowConfirmPassword(true);
+                        }
+                      }}
+                      onKeyUp={(event) => {
+                        if (event.key === "Enter" || event.key === " ") {
+                          setShowConfirmPassword(false);
+                        }
+                      }}
+                      onBlur={() => setShowConfirmPassword(false)}
+                      edge="end"
+                    >
+                      {showConfirmPassword ? <VisibilityOff /> : <Visibility />}
+                    </IconButton>
+                  </InputAdornment>
+                ),
+              },
+            }}
           />
 
           <Button
