@@ -12,6 +12,7 @@ import {
   Alert,
 } from '@mui/material'
 import api from '../api/axios'
+import endpoints from '../api/endpoints'
 import useAuth from '../context/useAuth'
 
 function Login() {
@@ -29,7 +30,7 @@ function Login() {
     setLoading(true)
 
     try {
-      const response = await api.post('/auth/login', {
+      const response = await api.post(endpoints.auth.login, {
         email: email.trim(),
         password,
       })

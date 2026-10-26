@@ -1,21 +1,11 @@
 import { useEffect, useMemo, useState } from "react";
 import api from "../api/axios";
+import endpoints from "../api/endpoints";
 import AuthContext from "./authContextDef";
-
-const getUserFromResponse = (responseData) => {
-  const data = responseData?.data ?? responseData;
-  const user = data?.user ?? data?.profile ?? data;
-
-  if (!user || typeof user !== "object" || Array.isArray(user)) {
-    throw new Error("The authentication response did not include user details.");
-  }
-
-  return user;
-};
 
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
-  const [isLoading, setIsLoading] = useState(false);
+  const [isLoading] = useState(false);
   const [authError, setAuthError] = useState("");
 
   useEffect(() => {
@@ -52,7 +42,7 @@ export function AuthProvider({ children }) {
   }, []);
 
   const logout = async () => {
-    await api.post("/auth/logout");
+    await api.post(endpoints.auth.logout);
     sessionStorage.removeItem("authToken");
     setUser(null);
     setAuthError("");

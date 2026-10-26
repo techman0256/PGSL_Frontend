@@ -41,10 +41,10 @@ import DeleteConfirmDialog from "../components/common/DeleteConfirmDialog";
 
 import {
   getProcessingBatches,
+  getAvailableStorageBatches,
   createProcessingBatch,
   deleteProcessingBatch,
 } from "../services/processingService";
-import { getStorageRecords } from "../services/storageService";
 
 const DEFAULT_PRODUCTS = [
   "Liquid Milk",
@@ -65,13 +65,6 @@ const RAW_MATERIAL_OPTIONS = [
 
 const BY_PRODUCT_OPTIONS = ["Cream", "Whey", "Buttermilk", "Skimmed Milk"];
 
-const fallbackStorageRecords = [
-  { batchId: "MR-20261007-004", milkType: "Cow Milk", quantity: 1250 },
-  { batchId: "MR-20261007-003", milkType: "Buffalo Milk", quantity: 800 },
-  { batchId: "MR-20261006-002", milkType: "Goat Milk", quantity: 250 },
-  { batchId: "MR-20261006-001", milkType: "Sahiwal Milk", quantity: 600 },
-];
-
 export default function MilkProcessing() {
   const queryClient = useQueryClient();
 
@@ -90,18 +83,14 @@ export default function MilkProcessing() {
     queryFn: getProcessingBatches,
   });
 
-  const { data: storageQueryData } = useQuery({
-    queryKey: ["storage-records"],
-    queryFn: getStorageRecords,
+  const { data: storageRecords = [] } = useQuery({
+    queryKey: ["processing-available-batches"],
+    queryFn: getAvailableStorageBatches,
   });
 
   const batches = processingQueryData?.data || [];
   const backendPersisted = processingQueryData?.backendPersisted ?? false;
   const contractNotice = processingQueryData?.contractNotice;
-
-  const storageRecords = useMemo(() => {
-    return storageQueryData?.data || fallbackStorageRecords;
-  }, [storageQueryData?.data]);
 
   const {
     register,
@@ -190,7 +179,9 @@ export default function MilkProcessing() {
     mutationFn: createProcessingBatch,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["processing-batches"] });
+      queryClient.invalidateQueries({ queryKey: ["processing-available-batches"] });
       queryClient.invalidateQueries({ queryKey: ["inventory"] });
+      queryClient.invalidateQueries({ queryKey: ["dispatch-available-products"] });
       queryClient.invalidateQueries({ queryKey: ["dashboard-data"] });
       setSnackbar({
         open: true,
@@ -881,4 +872,3 @@ export default function MilkProcessing() {
     </Box>
   );
 }
-

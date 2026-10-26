@@ -37,12 +37,11 @@ import DeleteConfirmDialog from "../components/common/DeleteConfirmDialog";
 
 import {
   getStorageRecords,
+  getAvailableBatchesForStorage,
   createStorageRecord,
   deleteStorageRecord,
   siloCapacities,
 } from "../services/storageService";
-import { getQualityTests } from "../services/qualityService";
-import { getReceptions } from "../services/receptionService";
 import useAuth from "../context/useAuth";
 import { canDeleteOperationalRecords } from "../auth/roleAccess";
 
@@ -65,30 +64,16 @@ export default function RawMilkStorage() {
     queryFn: getStorageRecords,
   });
 
-  const { data: testsQueryData } = useQuery({
-    queryKey: ["quality-tests"],
-    queryFn: getQualityTests,
-  });
-
-  const { data: receptionsQueryData } = useQuery({
-    queryKey: ["receptions"],
-    queryFn: getReceptions,
+  const { data: availableBatches = [] } = useQuery({
+    queryKey: ["storage-available-batches"],
+    queryFn: getAvailableBatchesForStorage,
   });
 
   const records = storageQueryData?.data || [];
   const backendPersisted = storageQueryData?.backendPersisted ?? false;
   const contractNotice = storageQueryData?.contractNotice;
 
-  const testedBatches = testsQueryData?.data || [
-    { batchId: "MR-20261007-004" },
-    { batchId: "MR-20261007-003" },
-    { batchId: "MR-20261006-002" },
-    { batchId: "MR-20261006-001" },
-  ];
-
-  const receptions = useMemo(() => {
-    return receptionsQueryData?.data || [];
-  }, [receptionsQueryData?.data]);
+  const testedBatches = availableBatches;
 
   const {
     register,
@@ -113,13 +98,13 @@ export default function RawMilkStorage() {
 
   // Auto determine milk type from receptions
   const autoMilkType = useMemo(() => {
-    const found = receptions.find((r) => r.batchId === watchedBatchId);
-    if (found) return `${found.milkType} Milk`;
+    const found = testedBatches.find((r) => r.batchId === watchedBatchId);
+    if (found) return found.milkType;
     if (watchedBatchId === "MR-20261007-004") return "Cow Milk";
     if (watchedBatchId === "MR-20261007-003") return "Buffalo Milk";
     if (watchedBatchId === "MR-20261006-002") return "Goat Milk";
     return "Cow Milk";
-  }, [watchedBatchId, receptions]);
+  }, [watchedBatchId, testedBatches]);
 
   const autoCapacity = useMemo(() => {
     return (siloCapacities[watchedSilo] || 5000).toLocaleString();
@@ -129,6 +114,8 @@ export default function RawMilkStorage() {
     mutationFn: createStorageRecord,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["storage-records"] });
+      queryClient.invalidateQueries({ queryKey: ["storage-available-batches"] });
+      queryClient.invalidateQueries({ queryKey: ["processing-available-batches"] });
       queryClient.invalidateQueries({ queryKey: ["dashboard-data"] });
       setSnackbar({
         open: true,

@@ -13,6 +13,7 @@ import {
   Alert,
 } from "@mui/material";
 import api from "../api/axios";
+import endpoints from "../api/endpoints";
 import { ROLES } from "../auth/roleAccess";
 function Signup() {
   const navigate = useNavigate();
@@ -49,7 +50,7 @@ function Signup() {
     setLoading(true);
 
     try {
-      await api.post("/auth/register", {
+      await api.post(endpoints.auth.register, {
         name: formData.name.trim(),
         email: formData.email.trim(),
         password: formData.password,

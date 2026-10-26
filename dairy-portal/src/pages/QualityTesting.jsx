@@ -96,6 +96,7 @@ export default function QualityTesting() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["quality-tests"] });
       queryClient.invalidateQueries({ queryKey: ["quality-test-available-batches"] });
+      queryClient.invalidateQueries({ queryKey: ["storage-available-batches"] });
       queryClient.invalidateQueries({ queryKey: ["dashboard-data"] });
       setSnackbar({
         open: true,
