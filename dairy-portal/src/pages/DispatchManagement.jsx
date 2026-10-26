@@ -47,11 +47,6 @@ import { getLocalDateTime } from "../utils/dateTime";
 const CHANNEL_OPTIONS = ["Retail", "Wholesale", "Distributor"];
 const UNIT_OPTIONS = ["L", "Kg", "Units"];
 
-const getLocalDateTime = () => {
-  const date = new Date();
-  date.setMinutes(date.getMinutes() - date.getTimezoneOffset());
-  return date.toISOString().slice(0, 16);
-};
 
 export default function DispatchManagement() {
   const queryClient = useQueryClient();
