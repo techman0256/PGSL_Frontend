@@ -39,10 +39,10 @@ import DeleteConfirmDialog from "../components/common/DeleteConfirmDialog";
 
 import {
   getDispatches,
+  getAvailableProductsForDispatch,
   createDispatch,
   deleteDispatch,
 } from "../services/dispatchService";
-import { getInventory } from "../services/inventoryService";
 
 const CHANNEL_OPTIONS = ["Retail", "Wholesale", "Distributor"];
 const UNIT_OPTIONS = ["L", "Kg", "Units"];
@@ -52,15 +52,6 @@ const getLocalDateTime = () => {
   date.setMinutes(date.getMinutes() - date.getTimezoneOffset());
   return date.toISOString().slice(0, 16);
 };
-
-const fallbackFinishedProducts = [
-  { product: "Liquid Milk", quantity: 588, unit: "L", processingBatch: "MP-20261007-006" },
-  { product: "Curd", quantity: 300, unit: "Kg", processingBatch: "MP-20261007-005" },
-  { product: "Butter", quantity: 32, unit: "Kg", processingBatch: "MP-20261007-004" },
-  { product: "Ghee", quantity: 13, unit: "Kg", processingBatch: "MP-20261007-003" },
-  { product: "Paneer", quantity: 60, unit: "Kg", processingBatch: "MP-20261006-002" },
-  { product: "Goat Cheese", quantity: 32, unit: "Kg", processingBatch: "MP-20261006-001" },
-];
 
 export default function DispatchManagement() {
   const queryClient = useQueryClient();
@@ -77,18 +68,16 @@ export default function DispatchManagement() {
     queryFn: getDispatches,
   });
 
-  const { data: inventoryQueryData } = useQuery({
-    queryKey: ["inventory"],
-    queryFn: getInventory,
+  const { data: availableProducts = [] } = useQuery({
+    queryKey: ["dispatch-available-products"],
+    queryFn: getAvailableProductsForDispatch,
   });
 
   const dispatches = dispatchesQueryData?.data || [];
   const backendPersisted = dispatchesQueryData?.backendPersisted ?? false;
   const contractNotice = dispatchesQueryData?.contractNotice;
 
-  const finishedProducts = useMemo(() => {
-    return inventoryQueryData?.data?.finishedProducts || fallbackFinishedProducts;
-  }, [inventoryQueryData?.data?.finishedProducts]);
+  const finishedProducts = useMemo(() => availableProducts, [availableProducts]);
 
   const {
     register,
@@ -127,6 +116,7 @@ export default function DispatchManagement() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["dispatches"] });
       queryClient.invalidateQueries({ queryKey: ["inventory"] });
+      queryClient.invalidateQueries({ queryKey: ["dispatch-available-products"] });
       queryClient.invalidateQueries({ queryKey: ["dashboard-data"] });
       setSnackbar({
         open: true,
@@ -159,6 +149,7 @@ export default function DispatchManagement() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["dispatches"] });
       queryClient.invalidateQueries({ queryKey: ["inventory"] });
+      queryClient.invalidateQueries({ queryKey: ["dispatch-available-products"] });
       setDeleteTargetId(null);
       setSnackbar({
         open: true,

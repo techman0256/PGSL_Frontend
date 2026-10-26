@@ -22,6 +22,7 @@ import { createUser, getUsers, updateUserRole } from "../services/userService";
 import { ROLES, getRoleLabel } from "../auth/roleAccess";
 
 const initialForm = { name: "", email: "", password: "", role: "OPERATOR" };
+const ASSIGNABLE_ROLES = ROLES.filter((role) => ["ADMIN", "OPERATOR"].includes(role.value));
 
 export default function UsersManagement() {
   const queryClient = useQueryClient();

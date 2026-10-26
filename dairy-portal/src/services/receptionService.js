@@ -1,4 +1,5 @@
 import api from "../api/axios";
+import endpoints from "../api/endpoints";
 import { createBatch, getBatches, updateBatch } from "./batchApi";
 
 const formatDate = (value) => {
@@ -13,12 +14,19 @@ const formatDate = (value) => {
   });
 };
 
+const toNumber = (value) => {
+  if (value && typeof value === "object" && "$numberDecimal" in value) {
+    return Number(value.$numberDecimal);
+  }
+  return Number(value);
+};
+
 export const normalizeMilkBatch = (batch) => ({
   ...batch,
   id: batch._id || batch.id,
   batchId: batch.milkBatchId || batch.batchId,
   milkType: (batch.milkType || "").toLowerCase().replace(/^./, (letter) => letter.toUpperCase()),
-  quantity: Number(batch.quantity),
+  quantity: toNumber(batch.quantity),
   date: formatDate(batch.receivedAt || batch.date),
   time: batch.receivedAt
     ? new Date(batch.receivedAt).toLocaleTimeString("en-US", {
@@ -30,7 +38,7 @@ export const normalizeMilkBatch = (batch) => ({
 });
 
 export const getReceptions = async () => ({
-  data: (await getBatches()).map(normalizeMilkBatch),
+  data: await getBatches().then((batches) => batches.map(normalizeMilkBatch)),
   backendPersisted: true,
 });
 
@@ -73,7 +81,7 @@ export const updateReception = async ({ id, ...receptionData }) => {
 };
 
 export const deleteReception = async (id) => {
-  const response = await api.delete(`/milk-batches/${encodeURIComponent(id)}`);
+  const response = await api.delete(`${endpoints.milkBatches}/${encodeURIComponent(id)}`);
 
   return {
     data: response.data,

@@ -112,6 +112,7 @@ export default function MilkReception() {
     mutationFn: createReception,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["receptions"] });
+      queryClient.invalidateQueries({ queryKey: ["quality-test-available-batches"] });
       queryClient.invalidateQueries({ queryKey: ["dashboard-data"] });
       setSnackbar({
         open: true,
@@ -141,6 +142,7 @@ export default function MilkReception() {
     mutationFn: updateReception,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["receptions"] });
+      queryClient.invalidateQueries({ queryKey: ["quality-test-available-batches"] });
       queryClient.invalidateQueries({ queryKey: ["dashboard-data"] });
       setEditingBatchId(null);
       setSnackbar({
