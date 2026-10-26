@@ -19,14 +19,12 @@ import {
   CircularProgress,
   Snackbar,
   Alert,
-  InputAdornment,
   MenuItem,
   Select,
   FormControl,
   Chip,
 } from "@mui/material";
 
-import CalendarTodayOutlinedIcon from "@mui/icons-material/CalendarTodayOutlined";
 import VisibilityOutlinedIcon from "@mui/icons-material/VisibilityOutlined";
 import DeleteOutlineOutlinedIcon from "@mui/icons-material/DeleteOutlineOutlined";
 import InfoOutlinedIcon from "@mui/icons-material/InfoOutlined";
@@ -36,25 +34,19 @@ import LockedField from "../components/common/LockedField";
 import ContractNotice from "../components/common/ContractNotice";
 import RecordDetailsDialog from "../components/common/RecordDetailsDialog";
 import DeleteConfirmDialog from "../components/common/DeleteConfirmDialog";
+import FormDateTimePicker from "../components/common/FormDateTimePicker";
 
 import {
   getDispatches,
+  getAvailableProductsForDispatch,
   createDispatch,
   deleteDispatch,
 } from "../services/dispatchService";
-import { getInventory } from "../services/inventoryService";
+import { getLocalDateTime } from "../utils/dateTime";
 
 const CHANNEL_OPTIONS = ["Retail", "Wholesale", "Distributor"];
 const UNIT_OPTIONS = ["L", "Kg", "Units"];
 
-const fallbackFinishedProducts = [
-  { product: "Liquid Milk", quantity: 588, unit: "L", processingBatch: "MP-20261007-006" },
-  { product: "Curd", quantity: 300, unit: "Kg", processingBatch: "MP-20261007-005" },
-  { product: "Butter", quantity: 32, unit: "Kg", processingBatch: "MP-20261007-004" },
-  { product: "Ghee", quantity: 13, unit: "Kg", processingBatch: "MP-20261007-003" },
-  { product: "Paneer", quantity: 60, unit: "Kg", processingBatch: "MP-20261006-002" },
-  { product: "Goat Cheese", quantity: 32, unit: "Kg", processingBatch: "MP-20261006-001" },
-];
 
 export default function DispatchManagement() {
   const queryClient = useQueryClient();
@@ -71,18 +63,16 @@ export default function DispatchManagement() {
     queryFn: getDispatches,
   });
 
-  const { data: inventoryQueryData } = useQuery({
-    queryKey: ["inventory"],
-    queryFn: getInventory,
+  const { data: availableProducts = [] } = useQuery({
+    queryKey: ["dispatch-available-products"],
+    queryFn: getAvailableProductsForDispatch,
   });
 
   const dispatches = dispatchesQueryData?.data || [];
   const backendPersisted = dispatchesQueryData?.backendPersisted ?? false;
   const contractNotice = dispatchesQueryData?.contractNotice;
 
-  const finishedProducts = useMemo(() => {
-    return inventoryQueryData?.data?.finishedProducts || fallbackFinishedProducts;
-  }, [inventoryQueryData?.data?.finishedProducts]);
+  const finishedProducts = useMemo(() => availableProducts, [availableProducts]);
 
   const {
     register,
@@ -98,7 +88,7 @@ export default function DispatchManagement() {
       unit: "L",
       customer: "FreshMart Stores",
       channel: "Retail",
-      dispatchDateTime: "07 Oct 2026 · 03:00 PM",
+      dispatchDateTime: getLocalDateTime(),
     },
   });
 
@@ -121,6 +111,7 @@ export default function DispatchManagement() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["dispatches"] });
       queryClient.invalidateQueries({ queryKey: ["inventory"] });
+      queryClient.invalidateQueries({ queryKey: ["dispatch-available-products"] });
       queryClient.invalidateQueries({ queryKey: ["dashboard-data"] });
       setSnackbar({
         open: true,
@@ -133,13 +124,16 @@ export default function DispatchManagement() {
         unit: "L",
         customer: "",
         channel: "Retail",
-        dispatchDateTime: "07 Oct 2026 · 03:00 PM",
+        dispatchDateTime: getLocalDateTime(),
       });
     },
     onError: (err) => {
       setSnackbar({
         open: true,
-        message: err.message || "Failed to create dispatch",
+        message:
+          err.response?.data?.message ||
+          err.message ||
+          "Failed to create dispatch",
         severity: "error",
       });
     },
@@ -150,6 +144,7 @@ export default function DispatchManagement() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["dispatches"] });
       queryClient.invalidateQueries({ queryKey: ["inventory"] });
+      queryClient.invalidateQueries({ queryKey: ["dispatch-available-products"] });
       setDeleteTargetId(null);
       setSnackbar({
         open: true,
@@ -160,7 +155,10 @@ export default function DispatchManagement() {
     onError: (err) => {
       setSnackbar({
         open: true,
-        message: err.message || "Failed to delete dispatch",
+        message:
+          err.response?.data?.message ||
+          err.message ||
+          "Failed to delete dispatch",
         severity: "error",
       });
     },
@@ -274,6 +272,7 @@ export default function DispatchManagement() {
                 fullWidth
                 size="small"
                 type="number"
+                slotProps={{ htmlInput: { step: "any" } }}
                 placeholder="100"
                 {...register("quantity", {
                   required: "Quantity is required",
@@ -357,20 +356,10 @@ export default function DispatchManagement() {
               <Typography sx={{ fontSize: "12px", fontWeight: 600, color: "#374151", mb: 0.5 }}>
                 Dispatch Date & Time
               </Typography>
-              <TextField
-                fullWidth
-                size="small"
-                {...register("dispatchDateTime", { required: "Date & Time is required" })}
-                slotProps={{
-                  input: {
-                    endAdornment: (
-                      <InputAdornment position="end">
-                        <CalendarTodayOutlinedIcon sx={{ fontSize: 16, color: "#9CA3AF" }} />
-                      </InputAdornment>
-                    ),
-                  },
-                }}
-                sx={{ "& .MuiOutlinedInput-root": { borderRadius: "6px" } }}
+              <FormDateTimePicker
+                control={control}
+                name="dispatchDateTime"
+                rules={{ required: "Date & Time is required" }}
               />
             </Grid>
           </Grid>
@@ -588,4 +577,3 @@ export default function DispatchManagement() {
     </Box>
   );
 }
-

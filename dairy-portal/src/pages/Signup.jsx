@@ -1,32 +1,31 @@
 import { useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import {
   Box,
   Button,
-  FormControl,
-  InputLabel,
-  MenuItem,
-  Select,
   TextField,
   Typography,
   Alert,
+  IconButton,
+  InputAdornment,
 } from "@mui/material";
-
+import Visibility from "@mui/icons-material/Visibility";
+import VisibilityOff from "@mui/icons-material/VisibilityOff";
 import api from "../api/axios";
-
+import endpoints from "../api/endpoints";
 function Signup() {
+  const navigate = useNavigate();
   const [formData, setFormData] = useState({
     name: "",
     email: "",
-    employeeId: "",
-    role: "operator",
     password: "",
     confirmPassword: "",
   });
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
-  const [success, setSuccess] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
   const handleChange = (event) => {
     const { name, value } = event.target;
@@ -41,7 +40,6 @@ function Signup() {
     event.preventDefault();
 
     setError("");
-    setSuccess("");
 
     if (formData.password !== formData.confirmPassword) {
       setError("Passwords do not match.");
@@ -51,23 +49,17 @@ function Signup() {
     setLoading(true);
 
     try {
-      const response = await api.post("/auth/register", {
+      await api.post(endpoints.auth.register, {
         name: formData.name.trim(),
         email: formData.email.trim(),
         password: formData.password,
       });
 
-      setSuccess("Account registered successfully!");
-
-      console.log("Registration response:", response.data);
-
-      setFormData({
-        name: "",
-        email: "",
-        employeeId: "",
-        role: "operator",
-        password: "",
-        confirmPassword: "",
+      navigate("/", {
+        replace: true,
+        state: {
+          signupSuccess: "Operator account registered successfully. You can log in now.",
+        },
       });
     } catch (err) {
       setError(
@@ -130,12 +122,6 @@ function Signup() {
           </Alert>
         )}
 
-        {success && (
-          <Alert severity="success" sx={{ mb: 2 }}>
-            {success}
-          </Alert>
-        )}
-
         <Box component="form" onSubmit={handleSubmit}>
           <TextField
             fullWidth
@@ -160,38 +146,44 @@ function Signup() {
 
           <TextField
             fullWidth
-            name="employeeId"
-            label="Employee ID"
-            value={formData.employeeId}
-            onChange={handleChange}
-            margin="normal"
-          />
-
-          <FormControl fullWidth margin="normal">
-            <InputLabel id="role-label">Role</InputLabel>
-            <Select
-              labelId="role-label"
-              name="role"
-              value={formData.role}
-              label="Role"
-              onChange={handleChange}
-            >
-              <MenuItem value="operator">Production Operator</MenuItem>
-              <MenuItem value="supervisor">Supervisor</MenuItem>
-              <MenuItem value="quality">Quality Control</MenuItem>
-              <MenuItem value="manager">Manager</MenuItem>
-            </Select>
-          </FormControl>
-
-          <TextField
-            fullWidth
             required
             name="password"
             label="Password"
-            type="password"
+            type={showPassword ? "text" : "password"}
             value={formData.password}
             onChange={handleChange}
             margin="normal"
+            slotProps={{
+              input: {
+                endAdornment: (
+                  <InputAdornment position="end">
+                    <IconButton
+                      aria-label="Hold to show password"
+                      onMouseDown={() => setShowPassword(true)}
+                      onMouseUp={() => setShowPassword(false)}
+                      onMouseLeave={() => setShowPassword(false)}
+                      onTouchStart={() => setShowPassword(true)}
+                      onTouchEnd={() => setShowPassword(false)}
+                      onKeyDown={(event) => {
+                        if (event.key === "Enter" || event.key === " ") {
+                          event.preventDefault();
+                          setShowPassword(true);
+                        }
+                      }}
+                      onKeyUp={(event) => {
+                        if (event.key === "Enter" || event.key === " ") {
+                          setShowPassword(false);
+                        }
+                      }}
+                      onBlur={() => setShowPassword(false)}
+                      edge="end"
+                    >
+                      {showPassword ? <VisibilityOff /> : <Visibility />}
+                    </IconButton>
+                  </InputAdornment>
+                ),
+              },
+            }}
           />
 
           <TextField
@@ -199,10 +191,41 @@ function Signup() {
             required
             name="confirmPassword"
             label="Confirm Password"
-            type="password"
+            type={showConfirmPassword ? "text" : "password"}
             value={formData.confirmPassword}
             onChange={handleChange}
             margin="normal"
+            slotProps={{
+              input: {
+                endAdornment: (
+                  <InputAdornment position="end">
+                    <IconButton
+                      aria-label="Hold to show confirm password"
+                      onMouseDown={() => setShowConfirmPassword(true)}
+                      onMouseUp={() => setShowConfirmPassword(false)}
+                      onMouseLeave={() => setShowConfirmPassword(false)}
+                      onTouchStart={() => setShowConfirmPassword(true)}
+                      onTouchEnd={() => setShowConfirmPassword(false)}
+                      onKeyDown={(event) => {
+                        if (event.key === "Enter" || event.key === " ") {
+                          event.preventDefault();
+                          setShowConfirmPassword(true);
+                        }
+                      }}
+                      onKeyUp={(event) => {
+                        if (event.key === "Enter" || event.key === " ") {
+                          setShowConfirmPassword(false);
+                        }
+                      }}
+                      onBlur={() => setShowConfirmPassword(false)}
+                      edge="end"
+                    >
+                      {showConfirmPassword ? <VisibilityOff /> : <Visibility />}
+                    </IconButton>
+                  </InputAdornment>
+                ),
+              },
+            }}
           />
 
           <Button

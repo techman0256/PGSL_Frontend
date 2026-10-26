@@ -19,30 +19,34 @@ import {
   CircularProgress,
   Snackbar,
   Alert,
-  InputAdornment,
   MenuItem,
   Select,
   FormControl,
 } from "@mui/material";
 
-import CalendarTodayOutlinedIcon from "@mui/icons-material/CalendarTodayOutlined";
-import AccessTimeOutlinedIcon from "@mui/icons-material/AccessTimeOutlined";
 import VisibilityOutlinedIcon from "@mui/icons-material/VisibilityOutlined";
 import DeleteOutlineOutlinedIcon from "@mui/icons-material/DeleteOutlineOutlined";
 
 import ContractNotice from "../components/common/ContractNotice";
 import RecordDetailsDialog from "../components/common/RecordDetailsDialog";
 import DeleteConfirmDialog from "../components/common/DeleteConfirmDialog";
+import FormDatePicker from "../components/common/FormDatePicker";
+import FormTimePicker from "../components/common/FormTimePicker";
 
 import {
   getQualityTests,
+  getAvailableBatchesForTesting,
   createQualityTest,
   deleteQualityTest,
 } from "../services/qualityService";
-import { getReceptions } from "../services/receptionService";
+import useAuth from "../context/useAuth";
+import { canDeleteOperationalRecords } from "../auth/roleAccess";
+import { getLocalDate, getLocalTime } from "../utils/dateTime";
 
 export default function QualityTesting() {
   const queryClient = useQueryClient();
+  const { user } = useAuth();
+  const canDeleteTests = canDeleteOperationalRecords(user?.role);
 
   const [selectedRecord, setSelectedRecord] = useState(null);
   const [deleteTargetId, setDeleteTargetId] = useState(null);
@@ -56,21 +60,18 @@ export default function QualityTesting() {
     queryFn: getQualityTests,
   });
 
-  const { data: receptionsQueryData } = useQuery({
-    queryKey: ["receptions"],
-    queryFn: getReceptions,
+  const {
+    data: availableBatches = [],
+    isError: availableBatchesError,
+    error: availableBatchesErrorDetails,
+  } = useQuery({
+    queryKey: ["quality-test-available-batches"],
+    queryFn: getAvailableBatchesForTesting,
   });
 
   const tests = testsQueryData?.data || [];
   const backendPersisted = testsQueryData?.backendPersisted ?? false;
   const contractNotice = testsQueryData?.contractNotice;
-
-  const receptionBatches = receptionsQueryData?.data || [
-    { batchId: "MR-20261007-004" },
-    { batchId: "MR-20261007-003" },
-    { batchId: "MR-20261006-002" },
-    { batchId: "MR-20261006-001" },
-  ];
 
   const {
     register,
@@ -80,12 +81,12 @@ export default function QualityTesting() {
     formState: { errors },
   } = useForm({
     defaultValues: {
-      batchId: "MR-20261007-004",
+      batchId: "",
       fat: "3.80",
       snf: "8.50",
       temperature: "6.0",
-      testDate: "07 Oct 2026",
-      testTime: "08:45 AM",
+      testDate: getLocalDate(),
+      testTime: getLocalTime(),
       remarks: "Quality measurements recorded for the received milk sample.",
     },
   });
@@ -94,6 +95,8 @@ export default function QualityTesting() {
     mutationFn: createQualityTest,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["quality-tests"] });
+      queryClient.invalidateQueries({ queryKey: ["quality-test-available-batches"] });
+      queryClient.invalidateQueries({ queryKey: ["storage-available-batches"] });
       queryClient.invalidateQueries({ queryKey: ["dashboard-data"] });
       setSnackbar({
         open: true,
@@ -101,12 +104,12 @@ export default function QualityTesting() {
         severity: "success",
       });
       reset({
-        batchId: receptionBatches[0]?.batchId || "",
+        batchId: "",
         fat: "",
         snf: "",
         temperature: "",
-        testDate: "07 Oct 2026",
-        testTime: "08:45 AM",
+        testDate: getLocalDate(),
+        testTime: getLocalTime(),
         remarks: "",
       });
     },
@@ -157,6 +160,13 @@ export default function QualityTesting() {
 
       {/* Contract / Endpoint Transparency Notice */}
       <ContractNotice notice={contractNotice} backendPersisted={backendPersisted} />
+      {availableBatchesError && (
+        <Alert severity="error" sx={{ mb: 2 }}>
+          {availableBatchesErrorDetails.response?.data?.message ||
+            availableBatchesErrorDetails.message ||
+            "Could not load batches ready for quality testing."}
+        </Alert>
+      )}
 
       {/* Form Card: Milk Quality Test */}
       <Paper
@@ -193,7 +203,10 @@ export default function QualityTesting() {
                         fontSize: "13px",
                       }}
                     >
-                      {receptionBatches.map((batch) => (
+                      <MenuItem value="" disabled sx={{ fontSize: "13px" }}>
+                        Select an available batch
+                      </MenuItem>
+                      {availableBatches.map((batch) => (
                         <MenuItem key={batch.batchId} value={batch.batchId} sx={{ fontSize: "13px" }}>
                           {batch.batchId}
                         </MenuItem>
@@ -213,7 +226,7 @@ export default function QualityTesting() {
                 fullWidth
                 size="small"
                 type="number"
-                step="0.01"
+                slotProps={{ htmlInput: { step: "0.01" } }}
                 placeholder="e.g. 3.80"
                 {...register("fat", {
                   required: "Fat percentage is required",
@@ -234,7 +247,7 @@ export default function QualityTesting() {
                 fullWidth
                 size="small"
                 type="number"
-                step="0.01"
+                slotProps={{ htmlInput: { step: "0.01" } }}
                 placeholder="e.g. 8.50"
                 {...register("snf", {
                   required: "SNF percentage is required",
@@ -255,7 +268,7 @@ export default function QualityTesting() {
                 fullWidth
                 size="small"
                 type="number"
-                step="0.1"
+                slotProps={{ htmlInput: { step: "0.1" } }}
                 placeholder="e.g. 6.0"
                 {...register("temperature", {
                   required: "Temperature is required",
@@ -273,20 +286,10 @@ export default function QualityTesting() {
               <Typography sx={{ fontSize: "12px", fontWeight: 600, color: "#374151", mb: 0.5 }}>
                 Test Date
               </Typography>
-              <TextField
-                fullWidth
-                size="small"
-                {...register("testDate", { required: "Test Date is required" })}
-                slotProps={{
-                  input: {
-                    endAdornment: (
-                      <InputAdornment position="end">
-                        <CalendarTodayOutlinedIcon sx={{ fontSize: 16, color: "#9CA3AF" }} />
-                      </InputAdornment>
-                    ),
-                  },
-                }}
-                sx={{ "& .MuiOutlinedInput-root": { borderRadius: "6px" } }}
+              <FormDatePicker
+                control={control}
+                name="testDate"
+                rules={{ required: "Test Date is required" }}
               />
             </Grid>
 
@@ -294,20 +297,10 @@ export default function QualityTesting() {
               <Typography sx={{ fontSize: "12px", fontWeight: 600, color: "#374151", mb: 0.5 }}>
                 Test Time
               </Typography>
-              <TextField
-                fullWidth
-                size="small"
-                {...register("testTime", { required: "Test Time is required" })}
-                slotProps={{
-                  input: {
-                    endAdornment: (
-                      <InputAdornment position="end">
-                        <AccessTimeOutlinedIcon sx={{ fontSize: 16, color: "#9CA3AF" }} />
-                      </InputAdornment>
-                    ),
-                  },
-                }}
-                sx={{ "& .MuiOutlinedInput-root": { borderRadius: "6px" } }}
+              <FormTimePicker
+                control={control}
+                name="testTime"
+                rules={{ required: "Test Time is required" }}
               />
             </Grid>
 
@@ -465,15 +458,17 @@ export default function QualityTesting() {
                           <VisibilityOutlinedIcon fontSize="small" />
                         </IconButton>
                       </Tooltip>
-                      <Tooltip title="Delete">
-                        <IconButton
-                          size="small"
-                          onClick={() => setDeleteTargetId(row.id || row.batchId)}
-                          sx={{ color: "#9CA3AF", "&:hover": { color: "#DC2626" } }}
-                        >
-                          <DeleteOutlineOutlinedIcon fontSize="small" />
-                        </IconButton>
-                      </Tooltip>
+                      {canDeleteTests && (
+                        <Tooltip title="Delete">
+                          <IconButton
+                            size="small"
+                            onClick={() => setDeleteTargetId(row.id || row.batchId)}
+                            sx={{ color: "#9CA3AF", "&:hover": { color: "#DC2626" } }}
+                          >
+                            <DeleteOutlineOutlinedIcon fontSize="small" />
+                          </IconButton>
+                        </Tooltip>
+                      )}
                     </TableCell>
                   </TableRow>
                 ))
@@ -498,12 +493,14 @@ export default function QualityTesting() {
       />
 
       {/* Delete Confirmation */}
-      <DeleteConfirmDialog
-        open={Boolean(deleteTargetId)}
-        onClose={() => setDeleteTargetId(null)}
-        onConfirm={() => deleteMutation.mutate(deleteTargetId)}
-        loading={deleteMutation.isPending}
-      />
+      {canDeleteTests && (
+        <DeleteConfirmDialog
+          open={Boolean(deleteTargetId)}
+          onClose={() => setDeleteTargetId(null)}
+          onConfirm={() => deleteMutation.mutate(deleteTargetId)}
+          loading={deleteMutation.isPending}
+        />
+      )}
 
       {/* Feedback Snackbar */}
       <Snackbar
@@ -524,4 +521,3 @@ export default function QualityTesting() {
     </Box>
   );
 }
-

@@ -17,8 +17,11 @@ import StorageIcon from "@mui/icons-material/Storage";
 import SettingsIcon from "@mui/icons-material/Settings";
 import InventoryIcon from "@mui/icons-material/Inventory2";
 import LocalShippingIcon from "@mui/icons-material/LocalShipping";
+import PeopleAltIcon from "@mui/icons-material/PeopleAlt";
 
 import { NavLink } from "react-router-dom";
+import useAuth from "../context/useAuth";
+import { canAccessModule } from "../auth/roleAccess";
 
 const drawerWidth = 220;
 const drawerHeight = 1008;
@@ -26,16 +29,22 @@ const menuWidth = 188;
 const menuItemHeight = 44;
 
 const menuItems = [
-  { text: "Dashboard", path: "/dashboard", icon: <DashboardIcon /> },
-  { text: "Milk Reception", path: "/milk-reception", icon: <LocalDrinkIcon /> },
-  { text: "Quality Testing", path: "/quality-testing", icon: <ScienceIcon /> },
-  { text: "Raw Milk Storage", path: "/raw-milk-storage", icon: <StorageIcon /> },
-  { text: "Processing", path: "/processing", icon: <SettingsIcon /> },
-  { text: "Inventory", path: "/inventory", icon: <InventoryIcon /> },
-  { text: "Dispatch", path: "/dispatch", icon: <LocalShippingIcon /> }
+  { text: "Dashboard", path: "/dashboard", module: "dashboard", icon: <DashboardIcon /> },
+  { text: "Milk Reception", path: "/milk-reception", module: "milk-reception", icon: <LocalDrinkIcon /> },
+  { text: "Quality Testing", path: "/quality-testing", module: "quality-testing", icon: <ScienceIcon /> },
+  { text: "Raw Milk Storage", path: "/raw-milk-storage", module: "raw-milk-storage", icon: <StorageIcon /> },
+  { text: "Processing", path: "/processing", module: "processing", icon: <SettingsIcon /> },
+  { text: "Inventory", path: "/inventory", module: "inventory", icon: <InventoryIcon /> },
+  { text: "Dispatch", path: "/dispatch", module: "dispatch", icon: <LocalShippingIcon /> },
+  { text: "User Management", path: "/users", module: "users", icon: <PeopleAltIcon /> },
 ];
 
 export default function Sidebar() {
+  const { user } = useAuth();
+  const visibleMenuItems = menuItems.filter((item) =>
+    canAccessModule(user?.role, item.module)
+  );
+
   return (
     <Drawer
       variant="permanent"
@@ -93,7 +102,7 @@ export default function Sidebar() {
             gap: "8px"
           }}
         >
-          {menuItems.map((item) => (
+          {visibleMenuItems.map((item) => (
             <ListItemButton
               key={item.path}
               component={NavLink}

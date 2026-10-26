@@ -19,42 +19,62 @@ import {
   CircularProgress,
   Snackbar,
   Alert,
-  InputAdornment,
+  MenuItem,
+  Select,
+  FormControl,
 } from "@mui/material";
 
-import CalendarTodayOutlinedIcon from "@mui/icons-material/CalendarTodayOutlined";
-import AccessTimeOutlinedIcon from "@mui/icons-material/AccessTimeOutlined";
 import VisibilityOutlinedIcon from "@mui/icons-material/VisibilityOutlined";
 import DeleteOutlineOutlinedIcon from "@mui/icons-material/DeleteOutlineOutlined";
+import EditOutlinedIcon from "@mui/icons-material/EditOutlined";
 
-import SegmentedToggle from "../components/common/SegmentedToggle";
-import LockedField from "../components/common/LockedField";
 import ContractNotice from "../components/common/ContractNotice";
 import RecordDetailsDialog from "../components/common/RecordDetailsDialog";
 import DeleteConfirmDialog from "../components/common/DeleteConfirmDialog";
+import LockedField from "../components/common/LockedField";
+import FormDatePicker from "../components/common/FormDatePicker";
+import FormTimePicker from "../components/common/FormTimePicker";
 
 import {
   getReceptions,
   createReception,
+  updateReception,
   deleteReception,
+  normalizeMilkBatch,
 } from "../services/receptionService";
+import { getBatchById } from "../services/batchApi";
+import useAuth from "../context/useAuth";
+import { canDeleteOperationalRecords } from "../auth/roleAccess";
+import { getLocalDate, getLocalTime } from "../utils/dateTime";
 
 const MILK_TYPES = ["Cow", "Buffalo", "Goat", "Sahiwal"];
 const SHIFTS = ["Morning", "Evening"];
 
 export default function MilkReception() {
   const queryClient = useQueryClient();
+  const { user } = useAuth();
+  const canDeleteBatches = canDeleteOperationalRecords(user?.role);
 
   const [selectedRecord, setSelectedRecord] = useState(null);
   const [deleteTargetId, setDeleteTargetId] = useState(null);
+  const [editingBatchId, setEditingBatchId] = useState(null);
   const [snackbar, setSnackbar] = useState({ open: false, message: "", severity: "success" });
 
   const {
     data: receptionQueryData,
     isLoading,
+    isError: receptionQueryFailed,
+    error: receptionQueryError,
   } = useQuery({
     queryKey: ["receptions"],
     queryFn: getReceptions,
+  });
+
+  const selectedBatchId = selectedRecord?.id;
+  const selectedBatchQuery = useQuery({
+    queryKey: ["milk-batch", selectedBatchId],
+    queryFn: () => getBatchById(selectedBatchId),
+    enabled: Boolean(selectedBatchId),
   });
 
   const receptions = receptionQueryData?.data || [];
@@ -69,11 +89,12 @@ export default function MilkReception() {
     formState: { errors },
   } = useForm({
     defaultValues: {
+      milkBatchId: "",
       milkType: "Cow",
       quantity: "1250",
-      date: "07 Oct 2026",
+      date: getLocalDate(),
       shift: "Morning",
-      time: "08:30 AM",
+      time: getLocalTime(),
       remarks: "",
     },
   });
@@ -82,6 +103,7 @@ export default function MilkReception() {
     mutationFn: createReception,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["receptions"] });
+      queryClient.invalidateQueries({ queryKey: ["quality-test-available-batches"] });
       queryClient.invalidateQueries({ queryKey: ["dashboard-data"] });
       setSnackbar({
         open: true,
@@ -89,11 +111,12 @@ export default function MilkReception() {
         severity: "success",
       });
       reset({
+        milkBatchId: "",
         milkType: "Cow",
         quantity: "",
-        date: "07 Oct 2026",
+        date: getLocalDate(),
         shift: "Morning",
-        time: "08:30 AM",
+        time: getLocalTime(),
         remarks: "",
       });
     },
@@ -101,6 +124,40 @@ export default function MilkReception() {
       setSnackbar({
         open: true,
         message: err.message || "Failed to record milk reception",
+        severity: "error",
+      });
+    },
+  });
+
+  const updateMutation = useMutation({
+    mutationFn: updateReception,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["receptions"] });
+      queryClient.invalidateQueries({ queryKey: ["quality-test-available-batches"] });
+      queryClient.invalidateQueries({ queryKey: ["dashboard-data"] });
+      setEditingBatchId(null);
+      setSnackbar({
+        open: true,
+        message: "Milk batch updated successfully.",
+        severity: "success",
+      });
+      reset({
+        milkBatchId: "",
+        milkType: "Cow",
+        quantity: "",
+        date: getLocalDate(),
+        shift: "Morning",
+        time: getLocalTime(),
+        remarks: "",
+      });
+    },
+    onError: (err) => {
+      setSnackbar({
+        open: true,
+        message:
+          err.response?.data?.message ||
+          err.message ||
+          "Failed to update milk batch.",
         severity: "error",
       });
     },
@@ -127,7 +184,32 @@ export default function MilkReception() {
   });
 
   const onSubmit = (formData) => {
-    createMutation.mutate(formData);
+    if (editingBatchId) {
+      updateMutation.mutate({ id: editingBatchId, ...formData });
+    } else {
+      createMutation.mutate(formData);
+    }
+  };
+
+  const startEditing = (batch) => {
+    const receivedAt = new Date(batch.receivedAt);
+    const date = Number.isNaN(receivedAt.getTime())
+      ? getLocalDate()
+      : `${receivedAt.getFullYear()}-${String(receivedAt.getMonth() + 1).padStart(2, "0")}-${String(receivedAt.getDate()).padStart(2, "0")}`;
+    const time = Number.isNaN(receivedAt.getTime())
+      ? getLocalTime()
+      : `${String(receivedAt.getHours()).padStart(2, "0")}:${String(receivedAt.getMinutes()).padStart(2, "0")}`;
+
+    setEditingBatchId(batch.id);
+    reset({
+      milkBatchId: batch.batchId,
+      milkType: batch.milkType,
+      quantity: String(batch.quantity),
+      date,
+      shift: batch.shift,
+      time,
+      remarks: batch.remarks || "",
+    });
   };
 
   return (
@@ -144,6 +226,20 @@ export default function MilkReception() {
 
       {/* Contract / Endpoint Transparency Notice */}
       <ContractNotice notice={contractNotice} backendPersisted={backendPersisted} />
+      {receptionQueryFailed && (
+        <Alert severity="error" sx={{ mb: 2 }}>
+          {receptionQueryError.response?.data?.message ||
+            receptionQueryError.message ||
+            "Could not load milk batches."}
+        </Alert>
+      )}
+      {selectedBatchQuery.isError && (
+        <Alert severity="error" sx={{ mb: 2 }}>
+          {selectedBatchQuery.error.response?.data?.message ||
+            selectedBatchQuery.error.message ||
+            "Could not load the selected milk batch."}
+        </Alert>
+      )}
 
       {/* Form Card: New Milk Reception */}
       <Paper
@@ -157,7 +253,7 @@ export default function MilkReception() {
         }}
       >
         <Typography sx={{ fontSize: "15px", fontWeight: 700, color: "#111827", mb: 2.5 }}>
-          New Milk Reception
+          {editingBatchId ? "Update Milk Batch" : "New Milk Reception"}
         </Typography>
 
         <form onSubmit={handleSubmit(onSubmit)}>
@@ -166,7 +262,8 @@ export default function MilkReception() {
             <Grid size={{ xs: 12, md: 6 }}>
               <LockedField
                 label="Milk Batch ID"
-                placeholder="Auto Generated"
+                value={editingBatchId ? selectedRecord?.batchId : ""}
+                bottomNote="Auto-generated when the reception is saved"
               />
             </Grid>
 
@@ -177,13 +274,20 @@ export default function MilkReception() {
               <Controller
                 name="milkType"
                 control={control}
+                rules={{ required: "Milk type is required" }}
                 render={({ field }) => (
-                  <SegmentedToggle
-                    options={MILK_TYPES}
-                    value={field.value}
-                    onChange={field.onChange}
-                    fullWidth
-                  />
+                  <FormControl fullWidth size="small" error={Boolean(errors.milkType)}>
+                    <Select
+                      {...field}
+                      sx={{ borderRadius: "6px", fontSize: "13px" }}
+                    >
+                      {MILK_TYPES.map((milkType) => (
+                        <MenuItem key={milkType} value={milkType} sx={{ fontSize: "13px" }}>
+                          {milkType}
+                        </MenuItem>
+                      ))}
+                    </Select>
+                  </FormControl>
                 )}
               />
             </Grid>
@@ -198,6 +302,7 @@ export default function MilkReception() {
                 size="small"
                 placeholder="e.g. 1,250"
                 type="number"
+                slotProps={{ htmlInput: { step: "any" } }}
                 {...register("quantity", {
                   required: "Quantity is required",
                   min: { value: 1, message: "Quantity must be greater than 0" },
@@ -218,24 +323,10 @@ export default function MilkReception() {
               <Typography sx={{ fontSize: "12px", fontWeight: 600, color: "#374151", mb: 0.5 }}>
                 Date
               </Typography>
-              <TextField
-                fullWidth
-                size="small"
-                {...register("date", { required: "Date is required" })}
-                slotProps={{
-                  input: {
-                    endAdornment: (
-                      <InputAdornment position="end">
-                        <CalendarTodayOutlinedIcon sx={{ fontSize: 16, color: "#9CA3AF" }} />
-                      </InputAdornment>
-                    ),
-                  },
-                }}
-                sx={{
-                  "& .MuiOutlinedInput-root": {
-                    borderRadius: "6px",
-                  },
-                }}
+              <FormDatePicker
+                control={control}
+                name="date"
+                rules={{ required: "Date is required" }}
               />
             </Grid>
 
@@ -247,12 +338,18 @@ export default function MilkReception() {
                 name="shift"
                 control={control}
                 render={({ field }) => (
-                  <SegmentedToggle
-                    options={SHIFTS}
-                    value={field.value}
-                    onChange={field.onChange}
-                    fullWidth
-                  />
+                  <FormControl fullWidth size="small">
+                    <Select
+                      {...field}
+                      sx={{ borderRadius: "6px", fontSize: "13px" }}
+                    >
+                      {SHIFTS.map((shift) => (
+                        <MenuItem key={shift} value={shift} sx={{ fontSize: "13px" }}>
+                          {shift}
+                        </MenuItem>
+                      ))}
+                    </Select>
+                  </FormControl>
                 )}
               />
             </Grid>
@@ -262,24 +359,10 @@ export default function MilkReception() {
               <Typography sx={{ fontSize: "12px", fontWeight: 600, color: "#374151", mb: 0.5 }}>
                 Time
               </Typography>
-              <TextField
-                fullWidth
-                size="small"
-                {...register("time", { required: "Time is required" })}
-                slotProps={{
-                  input: {
-                    endAdornment: (
-                      <InputAdornment position="end">
-                        <AccessTimeOutlinedIcon sx={{ fontSize: 16, color: "#9CA3AF" }} />
-                      </InputAdornment>
-                    ),
-                  },
-                }}
-                sx={{
-                  "& .MuiOutlinedInput-root": {
-                    borderRadius: "6px",
-                  },
-                }}
+              <FormTimePicker
+                control={control}
+                name="time"
+                rules={{ required: "Time is required" }}
               />
             </Grid>
 
@@ -295,7 +378,7 @@ export default function MilkReception() {
             <Button
               type="submit"
               variant="contained"
-              disabled={createMutation.isPending}
+              disabled={createMutation.isPending || updateMutation.isPending}
               sx={{
                 bgcolor: "#2D5A43",
                 "&:hover": { bgcolor: "#244835" },
@@ -309,12 +392,24 @@ export default function MilkReception() {
                 boxShadow: "none",
               }}
             >
-              {createMutation.isPending ? (
+              {createMutation.isPending || updateMutation.isPending ? (
                 <CircularProgress size={20} color="inherit" />
               ) : (
-                "Save Reception"
+                editingBatchId ? "Save Changes" : "Save Reception"
               )}
             </Button>
+            {editingBatchId && (
+              <Button
+                type="button"
+                onClick={() => {
+                  setEditingBatchId(null);
+                  reset();
+                }}
+                sx={{ ml: 1, textTransform: "none" }}
+              >
+                Cancel
+              </Button>
+            )}
           </Box>
         </form>
       </Paper>
@@ -416,15 +511,28 @@ export default function MilkReception() {
                           <VisibilityOutlinedIcon fontSize="small" />
                         </IconButton>
                       </Tooltip>
-                      <Tooltip title="Delete">
-                        <IconButton
-                          size="small"
-                          onClick={() => setDeleteTargetId(row.id || row.batchId)}
-                          sx={{ color: "#9CA3AF", "&:hover": { color: "#DC2626" } }}
-                        >
-                          <DeleteOutlineOutlinedIcon fontSize="small" />
-                        </IconButton>
-                      </Tooltip>
+                      {user?.role?.toUpperCase() === "ADMIN" && (
+                        <Tooltip title="Edit Batch">
+                          <IconButton
+                            size="small"
+                            onClick={() => startEditing(row)}
+                            sx={{ color: "#6B7280", "&:hover": { color: "#2D5A43" } }}
+                          >
+                            <EditOutlinedIcon fontSize="small" />
+                          </IconButton>
+                        </Tooltip>
+                      )}
+                      {canDeleteBatches && (
+                        <Tooltip title="Delete">
+                          <IconButton
+                            size="small"
+                            onClick={() => setDeleteTargetId(row.id || row.batchId)}
+                            sx={{ color: "#9CA3AF", "&:hover": { color: "#DC2626" } }}
+                          >
+                            <DeleteOutlineOutlinedIcon fontSize="small" />
+                          </IconButton>
+                        </Tooltip>
+                      )}
                     </TableCell>
                   </TableRow>
                 ))
@@ -445,16 +553,22 @@ export default function MilkReception() {
         open={Boolean(selectedRecord)}
         onClose={() => setSelectedRecord(null)}
         title="Milk Reception Batch Details"
-        data={selectedRecord}
+        data={
+          selectedBatchQuery.data
+            ? normalizeMilkBatch(selectedBatchQuery.data)
+            : selectedRecord
+        }
       />
 
       {/* Delete Confirmation */}
-      <DeleteConfirmDialog
-        open={Boolean(deleteTargetId)}
-        onClose={() => setDeleteTargetId(null)}
-        onConfirm={() => deleteMutation.mutate(deleteTargetId)}
-        loading={deleteMutation.isPending}
-      />
+      {canDeleteBatches && (
+        <DeleteConfirmDialog
+          open={Boolean(deleteTargetId)}
+          onClose={() => setDeleteTargetId(null)}
+          onConfirm={() => deleteMutation.mutate(deleteTargetId)}
+          loading={deleteMutation.isPending}
+        />
+      )}
 
       {/* Feedback Snackbar */}
       <Snackbar
@@ -475,4 +589,3 @@ export default function MilkReception() {
     </Box>
   );
 }
-

@@ -8,6 +8,8 @@ import {
   Menu,
   MenuItem,
   ButtonBase,
+  Snackbar,
+  Alert,
 } from "@mui/material";
 import KeyboardArrowDownIcon from "@mui/icons-material/KeyboardArrowDown";
 import LocalDrinkIcon from "@mui/icons-material/LocalDrink";
@@ -16,11 +18,13 @@ import PersonIcon from "@mui/icons-material/Person";
 import { useNavigate } from "react-router-dom";
 import Sidebar from "./Sidebar";
 import useAuth from "../context/useAuth";
+import { getRoleLabel } from "../auth/roleAccess";
 
 export default function DashboardLayout({ children }) {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
   const [anchorEl, setAnchorEl] = useState(null);
+  const [logoutError, setLogoutError] = useState("");
 
   const handleMenuOpen = (event) => {
     setAnchorEl(event.currentTarget);
@@ -30,10 +34,15 @@ export default function DashboardLayout({ children }) {
     setAnchorEl(null);
   };
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
     handleMenuClose();
-    logout();
-    navigate("/");
+    setLogoutError("");
+    try {
+      await logout();
+      navigate("/");
+    } catch (error) {
+      setLogoutError(error.response?.data?.message || "Could not sign out. Please try again.");
+    }
   };
 
   return (
@@ -100,7 +109,7 @@ export default function DashboardLayout({ children }) {
                   {user?.initials || "AD"}
                 </Avatar>
                 <Typography sx={{ fontSize: "13px", fontWeight: 500, color: "#374151" }}>
-                  {user?.username === "admin" ? "Admin" : user?.name || "Admin"}
+                  {user?.name || getRoleLabel(user?.role)}
                 </Typography>
                 <KeyboardArrowDownIcon sx={{ fontSize: 16, color: "#9CA3AF" }} />
               </ButtonBase>
@@ -138,6 +147,16 @@ export default function DashboardLayout({ children }) {
           {children}
         </Box>
       </Box>
+      <Snackbar
+        open={Boolean(logoutError)}
+        autoHideDuration={5000}
+        onClose={() => setLogoutError("")}
+        anchorOrigin={{ vertical: "bottom", horizontal: "right" }}
+      >
+        <Alert severity="error" variant="filled" onClose={() => setLogoutError("")}>
+          {logoutError}
+        </Alert>
+      </Snackbar>
     </Box>
   );
 }

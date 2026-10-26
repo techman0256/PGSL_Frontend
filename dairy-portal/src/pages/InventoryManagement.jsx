@@ -537,7 +537,7 @@ export default function InventoryManagement() {
                   fullWidth
                   size="small"
                   type="number"
-                  step="0.01"
+                  slotProps={{ htmlInput: { step: "0.01" } }}
                   placeholder="e.g. 10"
                   {...register("quantity", { required: "Quantity is required" })}
                   error={Boolean(errors.quantity)}
@@ -617,4 +617,3 @@ export default function InventoryManagement() {
     </Box>
   );
 }
-

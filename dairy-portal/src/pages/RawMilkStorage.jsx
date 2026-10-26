@@ -19,14 +19,11 @@ import {
   CircularProgress,
   Snackbar,
   Alert,
-  InputAdornment,
   MenuItem,
   Select,
   FormControl,
 } from "@mui/material";
 
-import CalendarTodayOutlinedIcon from "@mui/icons-material/CalendarTodayOutlined";
-import AccessTimeOutlinedIcon from "@mui/icons-material/AccessTimeOutlined";
 import VisibilityOutlinedIcon from "@mui/icons-material/VisibilityOutlined";
 import DeleteOutlineOutlinedIcon from "@mui/icons-material/DeleteOutlineOutlined";
 
@@ -34,20 +31,26 @@ import LockedField from "../components/common/LockedField";
 import ContractNotice from "../components/common/ContractNotice";
 import RecordDetailsDialog from "../components/common/RecordDetailsDialog";
 import DeleteConfirmDialog from "../components/common/DeleteConfirmDialog";
+import FormDatePicker from "../components/common/FormDatePicker";
+import FormTimePicker from "../components/common/FormTimePicker";
 
 import {
   getStorageRecords,
+  getAvailableBatchesForStorage,
   createStorageRecord,
   deleteStorageRecord,
   siloCapacities,
 } from "../services/storageService";
-import { getQualityTests } from "../services/qualityService";
-import { getReceptions } from "../services/receptionService";
+import useAuth from "../context/useAuth";
+import { canDeleteOperationalRecords } from "../auth/roleAccess";
+import { getLocalDate, getLocalTime } from "../utils/dateTime";
 
 const SILOS = ["Silo 01", "Silo 02", "Silo 03", "Silo 04"];
 
 export default function RawMilkStorage() {
   const queryClient = useQueryClient();
+  const { user } = useAuth();
+  const canDeleteStorageRecords = canDeleteOperationalRecords(user?.role);
 
   const [selectedRecord, setSelectedRecord] = useState(null);
   const [deleteTargetId, setDeleteTargetId] = useState(null);
@@ -61,30 +64,16 @@ export default function RawMilkStorage() {
     queryFn: getStorageRecords,
   });
 
-  const { data: testsQueryData } = useQuery({
-    queryKey: ["quality-tests"],
-    queryFn: getQualityTests,
-  });
-
-  const { data: receptionsQueryData } = useQuery({
-    queryKey: ["receptions"],
-    queryFn: getReceptions,
+  const { data: availableBatches = [] } = useQuery({
+    queryKey: ["storage-available-batches"],
+    queryFn: getAvailableBatchesForStorage,
   });
 
   const records = storageQueryData?.data || [];
   const backendPersisted = storageQueryData?.backendPersisted ?? false;
   const contractNotice = storageQueryData?.contractNotice;
 
-  const testedBatches = testsQueryData?.data || [
-    { batchId: "MR-20261007-004" },
-    { batchId: "MR-20261007-003" },
-    { batchId: "MR-20261006-002" },
-    { batchId: "MR-20261006-001" },
-  ];
-
-  const receptions = useMemo(() => {
-    return receptionsQueryData?.data || [];
-  }, [receptionsQueryData?.data]);
+  const testedBatches = availableBatches;
 
   const {
     register,
@@ -97,8 +86,8 @@ export default function RawMilkStorage() {
       batchId: "MR-20261007-004",
       siloNumber: "Silo 01",
       temperature: "4.0",
-      storageDate: "07 Oct 2026",
-      storageTime: "09:00 AM",
+      storageDate: getLocalDate(),
+      storageTime: getLocalTime(),
       quantity: "1250",
       remarks: "",
     },
@@ -109,13 +98,13 @@ export default function RawMilkStorage() {
 
   // Auto determine milk type from receptions
   const autoMilkType = useMemo(() => {
-    const found = receptions.find((r) => r.batchId === watchedBatchId);
-    if (found) return `${found.milkType} Milk`;
+    const found = testedBatches.find((r) => r.batchId === watchedBatchId);
+    if (found) return found.milkType;
     if (watchedBatchId === "MR-20261007-004") return "Cow Milk";
     if (watchedBatchId === "MR-20261007-003") return "Buffalo Milk";
     if (watchedBatchId === "MR-20261006-002") return "Goat Milk";
     return "Cow Milk";
-  }, [watchedBatchId, receptions]);
+  }, [watchedBatchId, testedBatches]);
 
   const autoCapacity = useMemo(() => {
     return (siloCapacities[watchedSilo] || 5000).toLocaleString();
@@ -125,6 +114,8 @@ export default function RawMilkStorage() {
     mutationFn: createStorageRecord,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["storage-records"] });
+      queryClient.invalidateQueries({ queryKey: ["storage-available-batches"] });
+      queryClient.invalidateQueries({ queryKey: ["processing-available-batches"] });
       queryClient.invalidateQueries({ queryKey: ["dashboard-data"] });
       setSnackbar({
         open: true,
@@ -135,8 +126,8 @@ export default function RawMilkStorage() {
         batchId: testedBatches[0]?.batchId || "",
         siloNumber: "Silo 01",
         temperature: "4.0",
-        storageDate: "07 Oct 2026",
-        storageTime: "09:00 AM",
+        storageDate: getLocalDate(),
+        storageTime: getLocalTime(),
         quantity: "",
         remarks: "",
       });
@@ -263,7 +254,7 @@ export default function RawMilkStorage() {
                 fullWidth
                 size="small"
                 type="number"
-                step="0.1"
+                slotProps={{ htmlInput: { step: "0.1" } }}
                 placeholder="e.g. 4.0"
                 {...register("temperature", {
                   required: "Storage temperature is required",
@@ -289,20 +280,10 @@ export default function RawMilkStorage() {
               <Typography sx={{ fontSize: "12px", fontWeight: 600, color: "#374151", mb: 0.5 }}>
                 Storage Date
               </Typography>
-              <TextField
-                fullWidth
-                size="small"
-                {...register("storageDate", { required: "Storage date is required" })}
-                slotProps={{
-                  input: {
-                    endAdornment: (
-                      <InputAdornment position="end">
-                        <CalendarTodayOutlinedIcon sx={{ fontSize: 16, color: "#9CA3AF" }} />
-                      </InputAdornment>
-                    ),
-                  },
-                }}
-                sx={{ "& .MuiOutlinedInput-root": { borderRadius: "6px" } }}
+              <FormDatePicker
+                control={control}
+                name="storageDate"
+                rules={{ required: "Storage date is required" }}
               />
             </Grid>
 
@@ -315,6 +296,7 @@ export default function RawMilkStorage() {
                 fullWidth
                 size="small"
                 type="number"
+                slotProps={{ htmlInput: { step: "any" } }}
                 placeholder="e.g. 1,250"
                 {...register("quantity", {
                   required: "Quantity is required",
@@ -330,20 +312,10 @@ export default function RawMilkStorage() {
               <Typography sx={{ fontSize: "12px", fontWeight: 600, color: "#374151", mb: 0.5 }}>
                 Storage Time
               </Typography>
-              <TextField
-                fullWidth
-                size="small"
-                {...register("storageTime", { required: "Storage time is required" })}
-                slotProps={{
-                  input: {
-                    endAdornment: (
-                      <InputAdornment position="end">
-                        <AccessTimeOutlinedIcon sx={{ fontSize: 16, color: "#9CA3AF" }} />
-                      </InputAdornment>
-                    ),
-                  },
-                }}
-                sx={{ "& .MuiOutlinedInput-root": { borderRadius: "6px" } }}
+              <FormTimePicker
+                control={control}
+                name="storageTime"
+                rules={{ required: "Storage time is required" }}
               />
             </Grid>
 
@@ -545,15 +517,17 @@ export default function RawMilkStorage() {
                           <VisibilityOutlinedIcon fontSize="small" />
                         </IconButton>
                       </Tooltip>
-                      <Tooltip title="Delete">
-                        <IconButton
-                          size="small"
-                          onClick={() => setDeleteTargetId(row.id || row.storageRecordId)}
-                          sx={{ color: "#9CA3AF", "&:hover": { color: "#DC2626" } }}
-                        >
-                          <DeleteOutlineOutlinedIcon fontSize="small" />
-                        </IconButton>
-                      </Tooltip>
+                      {canDeleteStorageRecords && (
+                        <Tooltip title="Delete">
+                          <IconButton
+                            size="small"
+                            onClick={() => setDeleteTargetId(row.id || row.storageRecordId)}
+                            sx={{ color: "#9CA3AF", "&:hover": { color: "#DC2626" } }}
+                          >
+                            <DeleteOutlineOutlinedIcon fontSize="small" />
+                          </IconButton>
+                        </Tooltip>
+                      )}
                     </TableCell>
                   </TableRow>
                 ))
@@ -578,12 +552,14 @@ export default function RawMilkStorage() {
       />
 
       {/* Delete Confirmation */}
-      <DeleteConfirmDialog
-        open={Boolean(deleteTargetId)}
-        onClose={() => setDeleteTargetId(null)}
-        onConfirm={() => deleteMutation.mutate(deleteTargetId)}
-        loading={deleteMutation.isPending}
-      />
+      {canDeleteStorageRecords && (
+        <DeleteConfirmDialog
+          open={Boolean(deleteTargetId)}
+          onClose={() => setDeleteTargetId(null)}
+          onConfirm={() => deleteMutation.mutate(deleteTargetId)}
+          loading={deleteMutation.isPending}
+        />
+      )}
 
       {/* Feedback Snackbar */}
       <Snackbar
@@ -604,4 +580,3 @@ export default function RawMilkStorage() {
     </Box>
   );
 }
-

@@ -27,8 +27,6 @@ import {
   Chip,
 } from "@mui/material";
 
-import CalendarTodayOutlinedIcon from "@mui/icons-material/CalendarTodayOutlined";
-import AccessTimeOutlinedIcon from "@mui/icons-material/AccessTimeOutlined";
 import VisibilityOutlinedIcon from "@mui/icons-material/VisibilityOutlined";
 import DeleteOutlineOutlinedIcon from "@mui/icons-material/DeleteOutlineOutlined";
 import AddIcon from "@mui/icons-material/Add";
@@ -38,13 +36,16 @@ import LockedField from "../components/common/LockedField";
 import ContractNotice from "../components/common/ContractNotice";
 import RecordDetailsDialog from "../components/common/RecordDetailsDialog";
 import DeleteConfirmDialog from "../components/common/DeleteConfirmDialog";
+import FormDatePicker from "../components/common/FormDatePicker";
+import FormTimePicker from "../components/common/FormTimePicker";
 
 import {
   getProcessingBatches,
+  getAvailableStorageBatches,
   createProcessingBatch,
   deleteProcessingBatch,
 } from "../services/processingService";
-import { getStorageRecords } from "../services/storageService";
+import { getLocalDate, getLocalTime } from "../utils/dateTime";
 
 const DEFAULT_PRODUCTS = [
   "Liquid Milk",
@@ -65,13 +66,6 @@ const RAW_MATERIAL_OPTIONS = [
 
 const BY_PRODUCT_OPTIONS = ["Cream", "Whey", "Buttermilk", "Skimmed Milk"];
 
-const fallbackStorageRecords = [
-  { batchId: "MR-20261007-004", milkType: "Cow Milk", quantity: 1250 },
-  { batchId: "MR-20261007-003", milkType: "Buffalo Milk", quantity: 800 },
-  { batchId: "MR-20261006-002", milkType: "Goat Milk", quantity: 250 },
-  { batchId: "MR-20261006-001", milkType: "Sahiwal Milk", quantity: 600 },
-];
-
 export default function MilkProcessing() {
   const queryClient = useQueryClient();
 
@@ -90,18 +84,14 @@ export default function MilkProcessing() {
     queryFn: getProcessingBatches,
   });
 
-  const { data: storageQueryData } = useQuery({
-    queryKey: ["storage-records"],
-    queryFn: getStorageRecords,
+  const { data: storageRecords = [] } = useQuery({
+    queryKey: ["processing-available-batches"],
+    queryFn: getAvailableStorageBatches,
   });
 
   const batches = processingQueryData?.data || [];
   const backendPersisted = processingQueryData?.backendPersisted ?? false;
   const contractNotice = processingQueryData?.contractNotice;
-
-  const storageRecords = useMemo(() => {
-    return storageQueryData?.data || fallbackStorageRecords;
-  }, [storageQueryData?.data]);
 
   const {
     register,
@@ -114,18 +104,18 @@ export default function MilkProcessing() {
     defaultValues: {
       inputMilkBatch: "MR-20261007-004",
       inputQuantity: "300",
-      processingDate: "07 Oct 2026",
-      processingTime: "10:30 AM",
+      processingDate: getLocalDate(),
+      processingTime: getLocalTime(),
       outputQuantity: "294",
       unit: "L",
       remarks: "Record final output after processing.",
       materialType: "",
       materialQty: "",
-      byProductType: "Cream",
-      byProductQty: "6",
+      byProductType: "",
+      byProductQty: "",
       byProductUnit: "L",
       addedMaterials: [],
-      addedByProducts: [{ byProduct: "Cream", quantity: 6, unit: "L" }],
+      addedByProducts: [],
     },
   });
 
@@ -140,8 +130,8 @@ export default function MilkProcessing() {
   const watchedByProductUnit = useWatch({ control, name: "byProductUnit", defaultValue: "L" });
   const watchedMaterialType = useWatch({ control, name: "materialType", defaultValue: "" });
   const watchedMaterialQty = useWatch({ control, name: "materialQty", defaultValue: "" });
-  const watchedByProductType = useWatch({ control, name: "byProductType", defaultValue: "Cream" });
-  const watchedByProductQty = useWatch({ control, name: "byProductQty", defaultValue: "6" });
+  const watchedByProductType = useWatch({ control, name: "byProductType", defaultValue: "" });
+  const watchedByProductQty = useWatch({ control, name: "byProductQty", defaultValue: "" });
 
   // Determine milk type from selected storage batch
   const selectedMilkType = useMemo(() => {
@@ -152,11 +142,16 @@ export default function MilkProcessing() {
     return "Cow";
   }, [watchedBatchId, storageRecords]);
 
+  const handleProductTypeChange = (nextProduct) => {
+    setActiveTab(nextProduct);
+    setValue("unit", nextProduct === "Liquid Milk" ? "L" : "Kg");
+  };
+
   const handleAddTab = () => {
     const newName = prompt("Enter new product type name:");
     if (newName && !productTabs.includes(newName.trim())) {
       setProductTabs([...productTabs, newName.trim()]);
-      setActiveTab(newName.trim());
+      handleProductTypeChange(newName.trim());
     }
   };
 
@@ -185,7 +180,9 @@ export default function MilkProcessing() {
     mutationFn: createProcessingBatch,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["processing-batches"] });
+      queryClient.invalidateQueries({ queryKey: ["processing-available-batches"] });
       queryClient.invalidateQueries({ queryKey: ["inventory"] });
+      queryClient.invalidateQueries({ queryKey: ["dispatch-available-products"] });
       queryClient.invalidateQueries({ queryKey: ["dashboard-data"] });
       setSnackbar({
         open: true,
@@ -195,14 +192,14 @@ export default function MilkProcessing() {
       reset({
         inputMilkBatch: storageRecords[0]?.batchId || "",
         inputQuantity: "",
-        processingDate: "07 Oct 2026",
-        processingTime: "10:30 AM",
+        processingDate: getLocalDate(),
+        processingTime: getLocalTime(),
         outputQuantity: "",
         unit: "L",
         remarks: "",
         materialType: "",
         materialQty: "",
-        byProductType: "Cream",
+        byProductType: "",
         byProductQty: "",
         byProductUnit: "L",
         addedMaterials: [],
@@ -320,6 +317,12 @@ export default function MilkProcessing() {
                 fullWidth
                 size="small"
                 type="number"
+                slotProps={{
+                  htmlInput: { step: "any" },
+                  input: {
+                    endAdornment: <InputAdornment position="end">L</InputAdornment>,
+                  },
+                }}
                 placeholder="300"
                 {...register("inputQuantity", {
                   required: "Input quantity is required",
@@ -327,11 +330,6 @@ export default function MilkProcessing() {
                 })}
                 error={Boolean(errors.inputQuantity)}
                 helperText={errors.inputQuantity?.message}
-                slotProps={{
-                  input: {
-                    endAdornment: <InputAdornment position="end">L</InputAdornment>,
-                  },
-                }}
                 sx={{ "& .MuiOutlinedInput-root": { borderRadius: "6px" } }}
               />
             </Grid>
@@ -347,20 +345,10 @@ export default function MilkProcessing() {
               <Typography sx={{ fontSize: "12px", fontWeight: 600, color: "#374151", mb: 0.5 }}>
                 Processing Date
               </Typography>
-              <TextField
-                fullWidth
-                size="small"
-                {...register("processingDate", { required: "Date is required" })}
-                slotProps={{
-                  input: {
-                    endAdornment: (
-                      <InputAdornment position="end">
-                        <CalendarTodayOutlinedIcon sx={{ fontSize: 16, color: "#9CA3AF" }} />
-                      </InputAdornment>
-                    ),
-                  },
-                }}
-                sx={{ "& .MuiOutlinedInput-root": { borderRadius: "6px" } }}
+              <FormDatePicker
+                control={control}
+                name="processingDate"
+                rules={{ required: "Date is required" }}
               />
             </Grid>
 
@@ -368,73 +356,11 @@ export default function MilkProcessing() {
               <Typography sx={{ fontSize: "12px", fontWeight: 600, color: "#374151", mb: 0.5 }}>
                 Processing Time
               </Typography>
-              <TextField
-                fullWidth
-                size="small"
-                {...register("processingTime", { required: "Time is required" })}
-                slotProps={{
-                  input: {
-                    endAdornment: (
-                      <InputAdornment position="end">
-                        <AccessTimeOutlinedIcon sx={{ fontSize: 16, color: "#9CA3AF" }} />
-                      </InputAdornment>
-                    ),
-                  },
-                }}
-                sx={{ "& .MuiOutlinedInput-root": { borderRadius: "6px" } }}
+              <FormTimePicker
+                control={control}
+                name="processingTime"
+                rules={{ required: "Time is required" }}
               />
-            </Grid>
-
-            {/* Product Type Tabs / Pills */}
-            <Grid size={{ xs: 12 }}>
-              <Stack direction="row" spacing={1} flexWrap="wrap" sx={{ gap: 1 }}>
-                {productTabs.map((p) => {
-                  const isSelected = activeTab === p;
-                  return (
-                    <Button
-                      key={p}
-                      size="small"
-                      onClick={() => {
-                        setActiveTab(p);
-                        setValue("unit", p === "Liquid Milk" ? "L" : "Kg");
-                      }}
-                      sx={{
-                        textTransform: "none",
-                        fontSize: "12px",
-                        fontWeight: isSelected ? 600 : 400,
-                        bgcolor: isSelected ? "#EBF3ED" : "#FFFFFF",
-                        color: isSelected ? "#2D5A43" : "#374151",
-                        border: isSelected ? "1px solid #2D5A43" : "1px solid #D1D5DB",
-                        borderRadius: "6px",
-                        px: 1.8,
-                        py: 0.5,
-                        "&:hover": {
-                          bgcolor: isSelected ? "#EBF3ED" : "#F9FAFB",
-                        },
-                      }}
-                    >
-                      {p}
-                    </Button>
-                  );
-                })}
-                <Button
-                  size="small"
-                  onClick={handleAddTab}
-                  startIcon={<AddIcon fontSize="small" />}
-                  sx={{
-                    textTransform: "none",
-                    fontSize: "12px",
-                    color: "#4B5563",
-                    border: "1px dashed #9CA3AF",
-                    borderRadius: "6px",
-                    px: 1.5,
-                    py: 0.5,
-                    "&:hover": { bgcolor: "#F9FAFB" },
-                  }}
-                >
-                  Add tab
-                </Button>
-              </Stack>
             </Grid>
 
             {/* Section: Raw Materials Used */}
@@ -480,9 +406,8 @@ export default function MilkProcessing() {
                       size="small"
                       placeholder="—"
                       type="number"
-                      value={watchedMaterialQty || ""}
-                      onChange={(e) => setValue("materialQty", e.target.value)}
                       slotProps={{
+                        htmlInput: { step: "any" },
                         input: {
                           endAdornment: (
                             <InputAdornment position="end">
@@ -491,6 +416,8 @@ export default function MilkProcessing() {
                           ),
                         },
                       }}
+                      value={watchedMaterialQty || ""}
+                      onChange={(e) => setValue("materialQty", e.target.value)}
                       sx={{ "& .MuiOutlinedInput-root": { borderRadius: "6px", bgcolor: "#FFF" } }}
                     />
                   </Grid>
@@ -545,10 +472,41 @@ export default function MilkProcessing() {
               </Typography>
 
               <Box sx={{ mb: 2 }}>
-                <LockedField
-                  label="Product Type"
-                  value={activeTab}
-                />
+                <Typography sx={{ fontSize: "12px", fontWeight: 600, color: "#374151", mb: 0.5 }}>
+                  Product Type
+                </Typography>
+                <Stack direction={{ xs: "column", sm: "row" }} spacing={1} alignItems="stretch">
+                  <FormControl fullWidth size="small">
+                    <Select
+                      value={activeTab}
+                      onChange={(e) => handleProductTypeChange(e.target.value)}
+                      sx={{ borderRadius: "6px", fontSize: "13px", bgcolor: "#FFF" }}
+                    >
+                      {productTabs.map((p) => (
+                        <MenuItem key={p} value={p} sx={{ fontSize: "13px" }}>
+                          {p}
+                        </MenuItem>
+                      ))}
+                    </Select>
+                  </FormControl>
+                  <Button
+                    size="small"
+                    onClick={handleAddTab}
+                    startIcon={<AddIcon fontSize="small" />}
+                    sx={{
+                      textTransform: "none",
+                      fontSize: "12px",
+                      color: "#4B5563",
+                      border: "1px dashed #9CA3AF",
+                      borderRadius: "6px",
+                      minWidth: 120,
+                      whiteSpace: "nowrap",
+                      "&:hover": { bgcolor: "#F9FAFB" },
+                    }}
+                  >
+                    Add product
+                  </Button>
+                </Stack>
               </Box>
 
               <Grid container spacing={2}>
@@ -560,6 +518,7 @@ export default function MilkProcessing() {
                     fullWidth
                     size="small"
                     type="number"
+                    slotProps={{ htmlInput: { step: "any" } }}
                     placeholder="294"
                     {...register("outputQuantity", {
                       required: "Output quantity is required",
@@ -613,10 +572,14 @@ export default function MilkProcessing() {
                   </Typography>
                   <FormControl fullWidth size="small">
                     <Select
-                      value={watchedByProductType || "Cream"}
+                      value={watchedByProductType || ""}
+                      displayEmpty
                       onChange={(e) => setValue("byProductType", e.target.value)}
                       sx={{ borderRadius: "6px", fontSize: "13px" }}
                     >
+                      <MenuItem value="" sx={{ fontSize: "13px" }}>
+                        <em>Select by-product (optional)</em>
+                      </MenuItem>
                       {BY_PRODUCT_OPTIONS.map((bp) => (
                         <MenuItem key={bp} value={bp} sx={{ fontSize: "13px" }}>
                           {bp}
@@ -634,6 +597,7 @@ export default function MilkProcessing() {
                     fullWidth
                     size="small"
                     type="number"
+                    slotProps={{ htmlInput: { step: "any" } }}
                     placeholder="6"
                     value={watchedByProductQty || ""}
                     onChange={(e) => setValue("byProductQty", e.target.value)}
@@ -897,4 +861,3 @@ export default function MilkProcessing() {
     </Box>
   );
 }
-

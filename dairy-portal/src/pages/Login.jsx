@@ -1,5 +1,6 @@
 
-import { Link } from 'react-router-dom'
+import { useState } from 'react'
+import { Link, useLocation, useNavigate } from 'react-router-dom'
 
 import {
   Box,
@@ -8,9 +9,63 @@ import {
   FormControlLabel,
   TextField,
   Typography,
+  Alert,
+  IconButton,
+  InputAdornment,
 } from '@mui/material'
+import Visibility from '@mui/icons-material/Visibility'
+import VisibilityOff from '@mui/icons-material/VisibilityOff'
+import api from '../api/axios'
+import endpoints from '../api/endpoints'
+import useAuth from '../context/useAuth'
 
 function Login() {
+  const location = useLocation()
+  const navigate = useNavigate()
+  const { login, authError } = useAuth()
+  const [email, setEmail] = useState('')
+  const [password, setPassword] = useState('')
+  const [showPassword, setShowPassword] = useState(false)
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState('')
+
+  const handleSubmit = async (event) => {
+    event.preventDefault()
+    setError('')
+    setLoading(true)
+
+    try {
+      const response = await api.post(endpoints.auth.login, {
+        email: email.trim(),
+        password,
+      })
+      const responseData = response.data?.data ?? response.data
+      const authenticatedUser = responseData?.user ?? responseData?.profile ?? responseData
+      const name = authenticatedUser?.name || authenticatedUser?.fullName || email.trim()
+
+      login({
+        ...authenticatedUser,
+        name,
+        username: authenticatedUser?.username || authenticatedUser?.email || email.trim(),
+        initials: name
+          .split(/\s+/)
+          .filter(Boolean)
+          .slice(0, 2)
+          .map((part) => part[0].toUpperCase())
+          .join(''),
+      })
+      navigate('/dashboard', { replace: true })
+    } catch (err) {
+      setError(
+        err.response?.data?.message ||
+          err.response?.data?.error ||
+          'Login failed. Check your email and password and try again.'
+      )
+    } finally {
+      setLoading(false)
+    }
+  }
+
   return (
     <Box
       sx={{
@@ -57,39 +112,101 @@ function Login() {
           Sign in to access the dairy data management system
         </Typography>
 
-        <TextField
-          fullWidth
-          label="Username or Email"
-          margin="normal"
-        />
+        {location.state?.signupSuccess && (
+          <Alert severity="success" sx={{ mb: 2 }}>
+            {location.state.signupSuccess}
+          </Alert>
+        )}
 
-        <TextField
-          fullWidth
-          label="Password"
-          type="password"
-          margin="normal"
-        />
+        {authError && (
+          <Alert severity="error" sx={{ mb: 2 }}>
+            {authError}
+          </Alert>
+        )}
 
-        <FormControlLabel
-          control={<Checkbox />}
-          label="Remember me"
-          sx={{ mt: 1 }}
-        />
+        {error && (
+          <Alert severity="error" sx={{ mb: 2 }}>
+            {error}
+          </Alert>
+        )}
 
-        <Button
-          fullWidth
-          variant="contained"
-          size="large"
-          sx={{
-            mt: 2,
-            backgroundColor: '#123B6D',
-            '&:hover': {
-              backgroundColor: '#0D2D52',
-            },
-          }}
-        >
-          Login
-        </Button>
+        <Box component="form" onSubmit={handleSubmit}>
+          <TextField
+            fullWidth
+            required
+            label="Email Address"
+            type="email"
+            autoComplete="email"
+            value={email}
+            onChange={(event) => setEmail(event.target.value)}
+            margin="normal"
+          />
+
+          <TextField
+            fullWidth
+            required
+            label="Password"
+            type={showPassword ? 'text' : 'password'}
+            autoComplete="current-password"
+            value={password}
+            onChange={(event) => setPassword(event.target.value)}
+            margin="normal"
+            slotProps={{
+              input: {
+                endAdornment: (
+                  <InputAdornment position="end">
+                    <IconButton
+                      aria-label="Hold to show password"
+                      onMouseDown={() => setShowPassword(true)}
+                      onMouseUp={() => setShowPassword(false)}
+                      onMouseLeave={() => setShowPassword(false)}
+                      onTouchStart={() => setShowPassword(true)}
+                      onTouchEnd={() => setShowPassword(false)}
+                      onKeyDown={(event) => {
+                        if (event.key === 'Enter' || event.key === ' ') {
+                          event.preventDefault()
+                          setShowPassword(true)
+                        }
+                      }}
+                      onKeyUp={(event) => {
+                        if (event.key === 'Enter' || event.key === ' ') {
+                          setShowPassword(false)
+                        }
+                      }}
+                      onBlur={() => setShowPassword(false)}
+                      edge="end"
+                    >
+                      {showPassword ? <VisibilityOff /> : <Visibility />}
+                    </IconButton>
+                  </InputAdornment>
+                ),
+              },
+            }}
+          />
+
+          <FormControlLabel
+            control={<Checkbox />}
+            label="Remember me"
+            sx={{ mt: 1 }}
+          />
+
+          <Button
+            fullWidth
+            type="submit"
+            variant="contained"
+            size="large"
+            disabled={loading}
+            sx={{
+              mt: 2,
+              backgroundColor: '#123B6D',
+              '&:hover': {
+                backgroundColor: '#0D2D52',
+              },
+            }}
+          >
+            {loading ? 'Logging in...' : 'Login'}
+          </Button>
+        </Box>
         <Typography
   variant="body2"
   textAlign="center"
