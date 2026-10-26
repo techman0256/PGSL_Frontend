@@ -19,14 +19,12 @@ import {
   CircularProgress,
   Snackbar,
   Alert,
-  InputAdornment,
   MenuItem,
   Select,
   FormControl,
   Chip,
 } from "@mui/material";
 
-import CalendarTodayOutlinedIcon from "@mui/icons-material/CalendarTodayOutlined";
 import VisibilityOutlinedIcon from "@mui/icons-material/VisibilityOutlined";
 import DeleteOutlineOutlinedIcon from "@mui/icons-material/DeleteOutlineOutlined";
 import InfoOutlinedIcon from "@mui/icons-material/InfoOutlined";
@@ -36,6 +34,7 @@ import LockedField from "../components/common/LockedField";
 import ContractNotice from "../components/common/ContractNotice";
 import RecordDetailsDialog from "../components/common/RecordDetailsDialog";
 import DeleteConfirmDialog from "../components/common/DeleteConfirmDialog";
+import FormDateTimePicker from "../components/common/FormDateTimePicker";
 
 import {
   getDispatches,
@@ -43,6 +42,7 @@ import {
   createDispatch,
   deleteDispatch,
 } from "../services/dispatchService";
+import { getLocalDateTime } from "../utils/dateTime";
 
 const CHANNEL_OPTIONS = ["Retail", "Wholesale", "Distributor"];
 const UNIT_OPTIONS = ["L", "Kg", "Units"];
@@ -277,6 +277,7 @@ export default function DispatchManagement() {
                 fullWidth
                 size="small"
                 type="number"
+                slotProps={{ htmlInput: { step: "any" } }}
                 placeholder="100"
                 {...register("quantity", {
                   required: "Quantity is required",
@@ -360,21 +361,10 @@ export default function DispatchManagement() {
               <Typography sx={{ fontSize: "12px", fontWeight: 600, color: "#374151", mb: 0.5 }}>
                 Dispatch Date & Time
               </Typography>
-              <TextField
-                fullWidth
-                size="small"
-                type="datetime-local"
-                {...register("dispatchDateTime", { required: "Date & Time is required" })}
-                slotProps={{
-                  input: {
-                    endAdornment: (
-                      <InputAdornment position="end">
-                        <CalendarTodayOutlinedIcon sx={{ fontSize: 16, color: "#9CA3AF" }} />
-                      </InputAdornment>
-                    ),
-                  },
-                }}
-                sx={{ "& .MuiOutlinedInput-root": { borderRadius: "6px" } }}
+              <FormDateTimePicker
+                control={control}
+                name="dispatchDateTime"
+                rules={{ required: "Date & Time is required" }}
               />
             </Grid>
           </Grid>

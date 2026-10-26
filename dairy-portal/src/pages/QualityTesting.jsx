@@ -19,20 +19,19 @@ import {
   CircularProgress,
   Snackbar,
   Alert,
-  InputAdornment,
   MenuItem,
   Select,
   FormControl,
 } from "@mui/material";
 
-import CalendarTodayOutlinedIcon from "@mui/icons-material/CalendarTodayOutlined";
-import AccessTimeOutlinedIcon from "@mui/icons-material/AccessTimeOutlined";
 import VisibilityOutlinedIcon from "@mui/icons-material/VisibilityOutlined";
 import DeleteOutlineOutlinedIcon from "@mui/icons-material/DeleteOutlineOutlined";
 
 import ContractNotice from "../components/common/ContractNotice";
 import RecordDetailsDialog from "../components/common/RecordDetailsDialog";
 import DeleteConfirmDialog from "../components/common/DeleteConfirmDialog";
+import FormDatePicker from "../components/common/FormDatePicker";
+import FormTimePicker from "../components/common/FormTimePicker";
 
 import {
   getQualityTests,
@@ -42,6 +41,7 @@ import {
 } from "../services/qualityService";
 import useAuth from "../context/useAuth";
 import { canDeleteOperationalRecords } from "../auth/roleAccess";
+import { getLocalDate, getLocalTime } from "../utils/dateTime";
 
 export default function QualityTesting() {
   const queryClient = useQueryClient();
@@ -85,8 +85,8 @@ export default function QualityTesting() {
       fat: "3.80",
       snf: "8.50",
       temperature: "6.0",
-      testDate: "07 Oct 2026",
-      testTime: "08:45 AM",
+      testDate: getLocalDate(),
+      testTime: getLocalTime(),
       remarks: "Quality measurements recorded for the received milk sample.",
     },
   });
@@ -108,8 +108,8 @@ export default function QualityTesting() {
         fat: "",
         snf: "",
         temperature: "",
-        testDate: "07 Oct 2026",
-        testTime: "08:45 AM",
+        testDate: getLocalDate(),
+        testTime: getLocalTime(),
         remarks: "",
       });
     },
@@ -226,7 +226,7 @@ export default function QualityTesting() {
                 fullWidth
                 size="small"
                 type="number"
-                step="0.01"
+                slotProps={{ htmlInput: { step: "0.01" } }}
                 placeholder="e.g. 3.80"
                 {...register("fat", {
                   required: "Fat percentage is required",
@@ -247,7 +247,7 @@ export default function QualityTesting() {
                 fullWidth
                 size="small"
                 type="number"
-                step="0.01"
+                slotProps={{ htmlInput: { step: "0.01" } }}
                 placeholder="e.g. 8.50"
                 {...register("snf", {
                   required: "SNF percentage is required",
@@ -268,7 +268,7 @@ export default function QualityTesting() {
                 fullWidth
                 size="small"
                 type="number"
-                step="0.1"
+                slotProps={{ htmlInput: { step: "0.1" } }}
                 placeholder="e.g. 6.0"
                 {...register("temperature", {
                   required: "Temperature is required",
@@ -286,20 +286,10 @@ export default function QualityTesting() {
               <Typography sx={{ fontSize: "12px", fontWeight: 600, color: "#374151", mb: 0.5 }}>
                 Test Date
               </Typography>
-              <TextField
-                fullWidth
-                size="small"
-                {...register("testDate", { required: "Test Date is required" })}
-                slotProps={{
-                  input: {
-                    endAdornment: (
-                      <InputAdornment position="end">
-                        <CalendarTodayOutlinedIcon sx={{ fontSize: 16, color: "#9CA3AF" }} />
-                      </InputAdornment>
-                    ),
-                  },
-                }}
-                sx={{ "& .MuiOutlinedInput-root": { borderRadius: "6px" } }}
+              <FormDatePicker
+                control={control}
+                name="testDate"
+                rules={{ required: "Test Date is required" }}
               />
             </Grid>
 
@@ -307,20 +297,10 @@ export default function QualityTesting() {
               <Typography sx={{ fontSize: "12px", fontWeight: 600, color: "#374151", mb: 0.5 }}>
                 Test Time
               </Typography>
-              <TextField
-                fullWidth
-                size="small"
-                {...register("testTime", { required: "Test Time is required" })}
-                slotProps={{
-                  input: {
-                    endAdornment: (
-                      <InputAdornment position="end">
-                        <AccessTimeOutlinedIcon sx={{ fontSize: 16, color: "#9CA3AF" }} />
-                      </InputAdornment>
-                    ),
-                  },
-                }}
-                sx={{ "& .MuiOutlinedInput-root": { borderRadius: "6px" } }}
+              <FormTimePicker
+                control={control}
+                name="testTime"
+                rules={{ required: "Test Time is required" }}
               />
             </Grid>
 

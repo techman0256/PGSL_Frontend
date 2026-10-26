@@ -19,14 +19,11 @@ import {
   CircularProgress,
   Snackbar,
   Alert,
-  InputAdornment,
   MenuItem,
   Select,
   FormControl,
 } from "@mui/material";
 
-import CalendarTodayOutlinedIcon from "@mui/icons-material/CalendarTodayOutlined";
-import AccessTimeOutlinedIcon from "@mui/icons-material/AccessTimeOutlined";
 import VisibilityOutlinedIcon from "@mui/icons-material/VisibilityOutlined";
 import DeleteOutlineOutlinedIcon from "@mui/icons-material/DeleteOutlineOutlined";
 import EditOutlinedIcon from "@mui/icons-material/EditOutlined";
@@ -34,6 +31,9 @@ import EditOutlinedIcon from "@mui/icons-material/EditOutlined";
 import ContractNotice from "../components/common/ContractNotice";
 import RecordDetailsDialog from "../components/common/RecordDetailsDialog";
 import DeleteConfirmDialog from "../components/common/DeleteConfirmDialog";
+import LockedField from "../components/common/LockedField";
+import FormDatePicker from "../components/common/FormDatePicker";
+import FormTimePicker from "../components/common/FormTimePicker";
 
 import {
   getReceptions,
@@ -45,19 +45,10 @@ import {
 import { getBatchById } from "../services/batchApi";
 import useAuth from "../context/useAuth";
 import { canDeleteOperationalRecords } from "../auth/roleAccess";
+import { getLocalDate, getLocalTime } from "../utils/dateTime";
 
 const MILK_TYPES = ["Cow", "Buffalo", "Goat", "Sahiwal"];
 const SHIFTS = ["Morning", "Evening"];
-
-const getLocalDate = () => {
-  const date = new Date();
-  const month = String(date.getMonth() + 1).padStart(2, "0");
-  const day = String(date.getDate()).padStart(2, "0");
-  return `${date.getFullYear()}-${month}-${day}`;
-};
-
-const getLocalTime = () =>
-  new Date().toTimeString().slice(0, 5);
 
 export default function MilkReception() {
   const queryClient = useQueryClient();
@@ -269,21 +260,10 @@ export default function MilkReception() {
           <Grid container spacing={2.5}>
             {/* Row 1: Milk Batch ID & Milk Type */}
             <Grid size={{ xs: 12, md: 6 }}>
-              <Typography sx={{ fontSize: "12px", fontWeight: 600, color: "#374151", mb: 0.5 }}>
-                Milk Batch ID
-              </Typography>
-              <TextField
-                fullWidth
-                size="small"
-                placeholder="e.g. MB-2026-000001"
-                disabled={Boolean(editingBatchId)}
-                {...register("milkBatchId", {
-                  required: "Milk batch ID is required",
-                  maxLength: { value: 64, message: "Milk batch ID is too long" },
-                })}
-                error={Boolean(errors.milkBatchId)}
-                helperText={errors.milkBatchId?.message}
-                sx={{ "& .MuiOutlinedInput-root": { borderRadius: "6px" } }}
+              <LockedField
+                label="Milk Batch ID"
+                value={editingBatchId ? selectedRecord?.batchId : ""}
+                bottomNote="Auto-generated when the reception is saved"
               />
             </Grid>
 
@@ -322,6 +302,7 @@ export default function MilkReception() {
                 size="small"
                 placeholder="e.g. 1,250"
                 type="number"
+                slotProps={{ htmlInput: { step: "any" } }}
                 {...register("quantity", {
                   required: "Quantity is required",
                   min: { value: 1, message: "Quantity must be greater than 0" },
@@ -342,25 +323,10 @@ export default function MilkReception() {
               <Typography sx={{ fontSize: "12px", fontWeight: 600, color: "#374151", mb: 0.5 }}>
                 Date
               </Typography>
-              <TextField
-                fullWidth
-                size="small"
-                type="date"
-                {...register("date", { required: "Date is required" })}
-                slotProps={{
-                  input: {
-                    endAdornment: (
-                      <InputAdornment position="end">
-                        <CalendarTodayOutlinedIcon sx={{ fontSize: 16, color: "#9CA3AF" }} />
-                      </InputAdornment>
-                    ),
-                  },
-                }}
-                sx={{
-                  "& .MuiOutlinedInput-root": {
-                    borderRadius: "6px",
-                  },
-                }}
+              <FormDatePicker
+                control={control}
+                name="date"
+                rules={{ required: "Date is required" }}
               />
             </Grid>
 
@@ -393,25 +359,10 @@ export default function MilkReception() {
               <Typography sx={{ fontSize: "12px", fontWeight: 600, color: "#374151", mb: 0.5 }}>
                 Time
               </Typography>
-              <TextField
-                fullWidth
-                size="small"
-                type="time"
-                {...register("time", { required: "Time is required" })}
-                slotProps={{
-                  input: {
-                    endAdornment: (
-                      <InputAdornment position="end">
-                        <AccessTimeOutlinedIcon sx={{ fontSize: 16, color: "#9CA3AF" }} />
-                      </InputAdornment>
-                    ),
-                  },
-                }}
-                sx={{
-                  "& .MuiOutlinedInput-root": {
-                    borderRadius: "6px",
-                  },
-                }}
+              <FormTimePicker
+                control={control}
+                name="time"
+                rules={{ required: "Time is required" }}
               />
             </Grid>
 

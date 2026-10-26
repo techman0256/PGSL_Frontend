@@ -50,7 +50,6 @@ export const createReception = async (receptionData) => {
   }
 
   const batch = await createBatch({
-    milkBatchId: receptionData.milkBatchId.trim(),
     milkType: receptionData.milkType.toUpperCase(),
     quantity: Number(receptionData.quantity),
     receivedAt: receivedAt.toISOString(),

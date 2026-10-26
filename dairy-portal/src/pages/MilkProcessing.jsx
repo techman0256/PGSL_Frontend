@@ -27,8 +27,6 @@ import {
   Chip,
 } from "@mui/material";
 
-import CalendarTodayOutlinedIcon from "@mui/icons-material/CalendarTodayOutlined";
-import AccessTimeOutlinedIcon from "@mui/icons-material/AccessTimeOutlined";
 import VisibilityOutlinedIcon from "@mui/icons-material/VisibilityOutlined";
 import DeleteOutlineOutlinedIcon from "@mui/icons-material/DeleteOutlineOutlined";
 import AddIcon from "@mui/icons-material/Add";
@@ -38,6 +36,8 @@ import LockedField from "../components/common/LockedField";
 import ContractNotice from "../components/common/ContractNotice";
 import RecordDetailsDialog from "../components/common/RecordDetailsDialog";
 import DeleteConfirmDialog from "../components/common/DeleteConfirmDialog";
+import FormDatePicker from "../components/common/FormDatePicker";
+import FormTimePicker from "../components/common/FormTimePicker";
 
 import {
   getProcessingBatches,
@@ -45,6 +45,7 @@ import {
   createProcessingBatch,
   deleteProcessingBatch,
 } from "../services/processingService";
+import { getLocalDate, getLocalTime } from "../utils/dateTime";
 
 const DEFAULT_PRODUCTS = [
   "Liquid Milk",
@@ -103,18 +104,18 @@ export default function MilkProcessing() {
     defaultValues: {
       inputMilkBatch: "MR-20261007-004",
       inputQuantity: "300",
-      processingDate: "07 Oct 2026",
-      processingTime: "10:30 AM",
+      processingDate: getLocalDate(),
+      processingTime: getLocalTime(),
       outputQuantity: "294",
       unit: "L",
       remarks: "Record final output after processing.",
       materialType: "",
       materialQty: "",
-      byProductType: "Cream",
-      byProductQty: "6",
+      byProductType: "",
+      byProductQty: "",
       byProductUnit: "L",
       addedMaterials: [],
-      addedByProducts: [{ byProduct: "Cream", quantity: 6, unit: "L" }],
+      addedByProducts: [],
     },
   });
 
@@ -129,8 +130,8 @@ export default function MilkProcessing() {
   const watchedByProductUnit = useWatch({ control, name: "byProductUnit", defaultValue: "L" });
   const watchedMaterialType = useWatch({ control, name: "materialType", defaultValue: "" });
   const watchedMaterialQty = useWatch({ control, name: "materialQty", defaultValue: "" });
-  const watchedByProductType = useWatch({ control, name: "byProductType", defaultValue: "Cream" });
-  const watchedByProductQty = useWatch({ control, name: "byProductQty", defaultValue: "6" });
+  const watchedByProductType = useWatch({ control, name: "byProductType", defaultValue: "" });
+  const watchedByProductQty = useWatch({ control, name: "byProductQty", defaultValue: "" });
 
   // Determine milk type from selected storage batch
   const selectedMilkType = useMemo(() => {
@@ -191,14 +192,14 @@ export default function MilkProcessing() {
       reset({
         inputMilkBatch: storageRecords[0]?.batchId || "",
         inputQuantity: "",
-        processingDate: "07 Oct 2026",
-        processingTime: "10:30 AM",
+        processingDate: getLocalDate(),
+        processingTime: getLocalTime(),
         outputQuantity: "",
         unit: "L",
         remarks: "",
         materialType: "",
         materialQty: "",
-        byProductType: "Cream",
+        byProductType: "",
         byProductQty: "",
         byProductUnit: "L",
         addedMaterials: [],
@@ -316,6 +317,12 @@ export default function MilkProcessing() {
                 fullWidth
                 size="small"
                 type="number"
+                slotProps={{
+                  htmlInput: { step: "any" },
+                  input: {
+                    endAdornment: <InputAdornment position="end">L</InputAdornment>,
+                  },
+                }}
                 placeholder="300"
                 {...register("inputQuantity", {
                   required: "Input quantity is required",
@@ -323,11 +330,6 @@ export default function MilkProcessing() {
                 })}
                 error={Boolean(errors.inputQuantity)}
                 helperText={errors.inputQuantity?.message}
-                slotProps={{
-                  input: {
-                    endAdornment: <InputAdornment position="end">L</InputAdornment>,
-                  },
-                }}
                 sx={{ "& .MuiOutlinedInput-root": { borderRadius: "6px" } }}
               />
             </Grid>
@@ -343,20 +345,10 @@ export default function MilkProcessing() {
               <Typography sx={{ fontSize: "12px", fontWeight: 600, color: "#374151", mb: 0.5 }}>
                 Processing Date
               </Typography>
-              <TextField
-                fullWidth
-                size="small"
-                {...register("processingDate", { required: "Date is required" })}
-                slotProps={{
-                  input: {
-                    endAdornment: (
-                      <InputAdornment position="end">
-                        <CalendarTodayOutlinedIcon sx={{ fontSize: 16, color: "#9CA3AF" }} />
-                      </InputAdornment>
-                    ),
-                  },
-                }}
-                sx={{ "& .MuiOutlinedInput-root": { borderRadius: "6px" } }}
+              <FormDatePicker
+                control={control}
+                name="processingDate"
+                rules={{ required: "Date is required" }}
               />
             </Grid>
 
@@ -364,20 +356,10 @@ export default function MilkProcessing() {
               <Typography sx={{ fontSize: "12px", fontWeight: 600, color: "#374151", mb: 0.5 }}>
                 Processing Time
               </Typography>
-              <TextField
-                fullWidth
-                size="small"
-                {...register("processingTime", { required: "Time is required" })}
-                slotProps={{
-                  input: {
-                    endAdornment: (
-                      <InputAdornment position="end">
-                        <AccessTimeOutlinedIcon sx={{ fontSize: 16, color: "#9CA3AF" }} />
-                      </InputAdornment>
-                    ),
-                  },
-                }}
-                sx={{ "& .MuiOutlinedInput-root": { borderRadius: "6px" } }}
+              <FormTimePicker
+                control={control}
+                name="processingTime"
+                rules={{ required: "Time is required" }}
               />
             </Grid>
 
@@ -424,9 +406,8 @@ export default function MilkProcessing() {
                       size="small"
                       placeholder="—"
                       type="number"
-                      value={watchedMaterialQty || ""}
-                      onChange={(e) => setValue("materialQty", e.target.value)}
                       slotProps={{
+                        htmlInput: { step: "any" },
                         input: {
                           endAdornment: (
                             <InputAdornment position="end">
@@ -435,6 +416,8 @@ export default function MilkProcessing() {
                           ),
                         },
                       }}
+                      value={watchedMaterialQty || ""}
+                      onChange={(e) => setValue("materialQty", e.target.value)}
                       sx={{ "& .MuiOutlinedInput-root": { borderRadius: "6px", bgcolor: "#FFF" } }}
                     />
                   </Grid>
@@ -535,6 +518,7 @@ export default function MilkProcessing() {
                     fullWidth
                     size="small"
                     type="number"
+                    slotProps={{ htmlInput: { step: "any" } }}
                     placeholder="294"
                     {...register("outputQuantity", {
                       required: "Output quantity is required",
@@ -588,10 +572,14 @@ export default function MilkProcessing() {
                   </Typography>
                   <FormControl fullWidth size="small">
                     <Select
-                      value={watchedByProductType || "Cream"}
+                      value={watchedByProductType || ""}
+                      displayEmpty
                       onChange={(e) => setValue("byProductType", e.target.value)}
                       sx={{ borderRadius: "6px", fontSize: "13px" }}
                     >
+                      <MenuItem value="" sx={{ fontSize: "13px" }}>
+                        <em>Select by-product (optional)</em>
+                      </MenuItem>
                       {BY_PRODUCT_OPTIONS.map((bp) => (
                         <MenuItem key={bp} value={bp} sx={{ fontSize: "13px" }}>
                           {bp}
@@ -609,6 +597,7 @@ export default function MilkProcessing() {
                     fullWidth
                     size="small"
                     type="number"
+                    slotProps={{ htmlInput: { step: "any" } }}
                     placeholder="6"
                     value={watchedByProductQty || ""}
                     onChange={(e) => setValue("byProductQty", e.target.value)}
