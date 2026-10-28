@@ -45,7 +45,11 @@ import {
 import { getBatchById } from "../services/batchApi";
 import useAuth from "../context/useAuth";
 import { canDeleteOperationalRecords } from "../auth/roleAccess";
-import { getLocalDate, getLocalTime } from "../utils/dateTime";
+import {
+  getLocalDate,
+  getLocalTime,
+  formatDisplayDate,
+} from "../utils/dateTime";
 
 const MILK_TYPES = ["Cow", "Buffalo", "Goat", "Sahiwal"];
 const SHIFTS = ["Morning", "Evening"];
@@ -487,7 +491,7 @@ export default function MilkReception() {
                     sx={{ "&:last-child td, &:last-child th": { border: 0 } }}
                   >
                     <TableCell sx={{ fontSize: "13px", color: "#1F2937" }}>
-                      {row.date}
+                      {formatDisplayDate(row.date)}
                     </TableCell>
                     <TableCell sx={{ fontSize: "13px", fontWeight: 500, color: "#1F2937" }}>
                       {row.batchId}

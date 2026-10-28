@@ -45,7 +45,11 @@ import {
   createProcessingBatch,
   deleteProcessingBatch,
 } from "../services/processingService";
-import { getLocalDate, getLocalTime } from "../utils/dateTime";
+import {
+  getLocalDate,
+  getLocalTime,
+  formatDisplayDate,
+} from "../utils/dateTime";
 
 const DEFAULT_PRODUCTS = [
   "Liquid Milk",
@@ -772,7 +776,7 @@ export default function MilkProcessing() {
                     sx={{ "&:last-child td, &:last-child th": { border: 0 } }}
                   >
                     <TableCell sx={{ fontSize: "13px", color: "#1F2937" }}>
-                      {row.date}
+                      {formatDisplayDate(row.date)}
                     </TableCell>
                     <TableCell sx={{ fontSize: "13px", fontWeight: 500, color: "#1F2937" }}>
                       {row.processingId}

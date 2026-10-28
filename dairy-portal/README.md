@@ -1,5 +1,18 @@
 # React + Vite
 
+## Vercel deployment
+
+This application uses React Router with client-side routes. The `vercel.json`
+rewrite sends direct route requests to `index.html`, allowing React's
+`SessionGate` and route guards to handle authentication redirects instead of
+Vercel returning a 404.
+
+Configure these Vercel environment variables before deploying:
+
+```text
+VITE_API_BASE_URL=https://your-backend-domain.com/api
+```
+
 This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
 
 Currently, two official plugins are available:

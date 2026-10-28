@@ -43,7 +43,11 @@ import {
 } from "../services/storageService";
 import useAuth from "../context/useAuth";
 import { canDeleteOperationalRecords } from "../auth/roleAccess";
-import { getLocalDate, getLocalTime } from "../utils/dateTime";
+import {
+  getLocalDate,
+  getLocalTime,
+  formatDisplayDate,
+} from "../utils/dateTime";
 
 const SILOS = ["Silo 01", "Silo 02", "Silo 03", "Silo 04"];
 
@@ -487,7 +491,7 @@ export default function RawMilkStorage() {
                     sx={{ "&:last-child td, &:last-child th": { border: 0 } }}
                   >
                     <TableCell sx={{ fontSize: "13px", color: "#1F2937" }}>
-                      {row.date}
+                      {formatDisplayDate(row.date)}
                     </TableCell>
                     <TableCell sx={{ fontSize: "13px", fontWeight: 500, color: "#1F2937" }}>
                       {row.storageRecordId}

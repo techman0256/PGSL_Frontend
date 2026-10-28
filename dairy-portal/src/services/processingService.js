@@ -8,6 +8,8 @@ const normalizeProcessingBatch = (batch) => ({
   inputBatchId: batch.inputBatchId || batch.inputMilkBatch,
   product: batch.product || batch.productType,
   unit: batch.unit || batch.outputUnit,
+  date: batch.processingDate || batch.date,
+  time: batch.processingTime || batch.time,
   materialsUsed: batch.materialsUsed || batch.rawMaterialsUsed || [],
 });
 
