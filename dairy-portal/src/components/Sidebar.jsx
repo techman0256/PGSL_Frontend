@@ -18,6 +18,7 @@ import SettingsIcon from "@mui/icons-material/Settings";
 import InventoryIcon from "@mui/icons-material/Inventory2";
 import LocalShippingIcon from "@mui/icons-material/LocalShipping";
 import PeopleAltIcon from "@mui/icons-material/PeopleAlt";
+import AccountTreeIcon from "@mui/icons-material/AccountTree";
 
 import { NavLink } from "react-router-dom";
 import useAuth from "../context/useAuth";
@@ -36,6 +37,7 @@ const menuItems = [
   { text: "Processing", path: "/processing", module: "processing", icon: <SettingsIcon /> },
   { text: "Inventory", path: "/inventory", module: "inventory", icon: <InventoryIcon /> },
   { text: "Dispatch", path: "/dispatch", module: "dispatch", icon: <LocalShippingIcon /> },
+  { text: "Traceability", path: "/traceability", module: "traceability", icon: <AccountTreeIcon /> },
   { text: "User Management", path: "/users", module: "users", icon: <PeopleAltIcon /> },
 ];
 

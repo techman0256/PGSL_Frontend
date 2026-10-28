@@ -16,6 +16,7 @@ const allModules = [
   "processing",
   "inventory",
   "dispatch",
+  "traceability",
 ];
 
 const moduleAccess = {
