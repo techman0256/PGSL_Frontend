@@ -30,6 +30,9 @@ export const getInventory = async () => {
         totalRawMaterials: summary?.totalRawMaterials?.count ?? rawMaterials.length,
         lowStockCount: summary?.lowStockItems?.count ??
           rawMaterials.filter((material) => material.stockLevel === "Low Stock").length,
+        mainProductCount: summary?.totalFinishedProducts?.mainProductCount,
+        byProductCount: summary?.totalFinishedProducts?.byProductCount,
+        lowStockItems: summary?.lowStockItems?.items ?? [],
       },
     },
     backendPersisted: true,
@@ -37,16 +40,31 @@ export const getInventory = async () => {
 };
 
 export const addRawMaterial = async (materialData) => {
-  const response = await api.post(endpoints.inventory.rawMaterials, {
-    material: materialData.material,
-    availableQuantity: Number(materialData.quantity),
-    unit: materialData.unit,
-    lowStockThreshold: Number(materialData.minThreshold),
-  });
+  const materialsResponse = await api.get(endpoints.inventory.rawMaterials);
+  const materials = getResponseData(materialsResponse)?.materials ?? [];
+  const existing = materials.find(
+    (material) => material.material.toLowerCase() === materialData.material.trim().toLowerCase()
+  );
+  const response = existing
+    ? await api.put(`${endpoints.inventory.rawMaterials}/${existing._id}`, {
+        addQuantity: Number(materialData.quantity),
+      })
+    : await api.post(endpoints.inventory.rawMaterials, {
+        material: materialData.material,
+        availableQuantity: Number(materialData.quantity),
+        unit: materialData.unit,
+        lowStockThreshold: Number(materialData.minThreshold),
+      });
   const data = getResponseData(response);
 
   return {
     data: data?.material ?? data,
     backendPersisted: true,
   };
+};
+
+export const getRawMaterials = async () => {
+  const response = await api.get(endpoints.inventory.rawMaterials);
+  const data = getResponseData(response);
+  return data?.materials ?? data;
 };

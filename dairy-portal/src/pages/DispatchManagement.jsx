@@ -42,7 +42,10 @@ import {
   createDispatch,
   deleteDispatch,
 } from "../services/dispatchService";
-import { getLocalDateTime } from "../utils/dateTime";
+import {
+  getLocalDateTime,
+  formatDisplayDateTime,
+} from "../utils/dateTime";
 
 const CHANNEL_OPTIONS = ["Retail", "Wholesale", "Distributor"];
 const UNIT_OPTIONS = ["L", "Kg", "Units"];
@@ -488,7 +491,7 @@ export default function DispatchManagement() {
                     sx={{ "&:last-child td, &:last-child th": { border: 0 } }}
                   >
                     <TableCell sx={{ fontSize: "13px", color: "#1F2937" }}>
-                      {row.dateTime}
+                      {formatDisplayDateTime(row.dateTime)}
                     </TableCell>
                     <TableCell sx={{ fontSize: "13px", fontWeight: 500, color: "#1F2937" }}>
                       {row.dispatchId}

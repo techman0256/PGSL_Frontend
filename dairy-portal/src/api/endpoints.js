@@ -17,6 +17,7 @@ const endpoints = {
     rawMaterials: "/inventory/raw-materials",
   },
   dispatches: "/dispatches",
+  traceability: "/traceability",
 };
 
 export default endpoints;

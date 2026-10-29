@@ -16,6 +16,7 @@ import MilkProcessing from "./pages/MilkProcessing";
 import InventoryManagement from "./pages/InventoryManagement";
 import DispatchManagement from "./pages/DispatchManagement";
 import UsersManagement from "./pages/UsersManagement";
+import BatchTraceability from "./pages/BatchTraceability";
 import { canAccessModule } from "./auth/roleAccess";
 
 const queryClient = new QueryClient({
@@ -168,6 +169,19 @@ function App() {
                   <RoleGate module="dispatch">
                     <DashboardLayout>
                       <DispatchManagement />
+                    </DashboardLayout>
+                  </RoleGate>
+                </SessionGate>
+              }
+            />
+
+            <Route
+              path="/traceability"
+              element={
+                <SessionGate>
+                  <RoleGate module="traceability">
+                    <DashboardLayout>
+                      <BatchTraceability />
                     </DashboardLayout>
                   </RoleGate>
                 </SessionGate>

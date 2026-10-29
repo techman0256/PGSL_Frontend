@@ -8,6 +8,8 @@ const normalizeProcessingBatch = (batch) => ({
   inputBatchId: batch.inputBatchId || batch.inputMilkBatch,
   product: batch.product || batch.productType,
   unit: batch.unit || batch.outputUnit,
+  date: batch.processingDate || batch.date,
+  time: batch.processingTime || batch.time,
   materialsUsed: batch.materialsUsed || batch.rawMaterialsUsed || [],
 });
 
@@ -44,6 +46,7 @@ export const createProcessingBatch = async (batchData) => {
     rawMaterialsUsed: (batchData.materialsUsed || []).map((material) => ({
       material: material.material,
       quantityUsed: Number(material.quantityUsed ?? material.quantity),
+      unit: material.unit,
     })),
     byProducts: batchData.byProducts || [],
     remarks: batchData.remarks || "",

@@ -45,7 +45,12 @@ import {
   createProcessingBatch,
   deleteProcessingBatch,
 } from "../services/processingService";
-import { getLocalDate, getLocalTime } from "../utils/dateTime";
+import { getRawMaterials } from "../services/inventoryService";
+import {
+  getLocalDate,
+  getLocalTime,
+  formatDisplayDate,
+} from "../utils/dateTime";
 
 const DEFAULT_PRODUCTS = [
   "Liquid Milk",
@@ -54,14 +59,6 @@ const DEFAULT_PRODUCTS = [
   "Ghee",
   "Paneer",
   "Goat Cheese",
-];
-
-const RAW_MATERIAL_OPTIONS = [
-  "Citric Acid",
-  "Starter Culture",
-  "Salt",
-  "Stabilizer",
-  "Packaging Materials",
 ];
 
 const BY_PRODUCT_OPTIONS = ["Cream", "Whey", "Buttermilk", "Skimmed Milk"];
@@ -89,6 +86,11 @@ export default function MilkProcessing() {
     queryFn: getAvailableStorageBatches,
   });
 
+  const { data: rawMaterials = [] } = useQuery({
+    queryKey: ["inventory-raw-materials"],
+    queryFn: getRawMaterials,
+  });
+
   const batches = processingQueryData?.data || [];
   const backendPersisted = processingQueryData?.backendPersisted ?? false;
   const contractNotice = processingQueryData?.contractNotice;
@@ -99,10 +101,11 @@ export default function MilkProcessing() {
     control,
     reset,
     setValue,
+    setError,
     formState: { errors },
   } = useForm({
     defaultValues: {
-      inputMilkBatch: "MR-20261007-004",
+      inputMilkBatch: "",
       inputQuantity: "300",
       processingDate: getLocalDate(),
       processingTime: getLocalTime(),
@@ -133,14 +136,18 @@ export default function MilkProcessing() {
   const watchedByProductType = useWatch({ control, name: "byProductType", defaultValue: "" });
   const watchedByProductQty = useWatch({ control, name: "byProductQty", defaultValue: "" });
 
+  const selectedStorageBatch = useMemo(
+    () => storageRecords.find((s) => s.batchId === watchedBatchId),
+    [watchedBatchId, storageRecords]
+  );
+
   // Determine milk type from selected storage batch
   const selectedMilkType = useMemo(() => {
-    const found = storageRecords.find((s) => s.batchId === watchedBatchId);
-    if (found?.milkType) {
-      return found.milkType.replace(" Milk", "");
+    if (selectedStorageBatch?.milkType) {
+      return selectedStorageBatch.milkType.replace(" Milk", "");
     }
     return "Cow";
-  }, [watchedBatchId, storageRecords]);
+  }, [selectedStorageBatch]);
 
   const handleProductTypeChange = (nextProduct) => {
     setActiveTab(nextProduct);
@@ -157,10 +164,11 @@ export default function MilkProcessing() {
 
   const handleAddMaterialItem = () => {
     if (!watchedMaterialType || !watchedMaterialQty) return;
+    const selectedMaterial = rawMaterials.find((material) => material.material === watchedMaterialType);
     appendMaterial({
       material: watchedMaterialType,
       quantity: Number(watchedMaterialQty),
-      unit: watchedMaterialType === "Starter Culture" ? "g" : "Kg",
+      unit: selectedMaterial?.unit || "Kg",
     });
     setValue("materialType", "");
     setValue("materialQty", "");
@@ -182,6 +190,7 @@ export default function MilkProcessing() {
       queryClient.invalidateQueries({ queryKey: ["processing-batches"] });
       queryClient.invalidateQueries({ queryKey: ["processing-available-batches"] });
       queryClient.invalidateQueries({ queryKey: ["inventory"] });
+      queryClient.invalidateQueries({ queryKey: ["inventory-raw-materials"] });
       queryClient.invalidateQueries({ queryKey: ["dispatch-available-products"] });
       queryClient.invalidateQueries({ queryKey: ["dashboard-data"] });
       setSnackbar({
@@ -237,6 +246,21 @@ export default function MilkProcessing() {
   });
 
   const onSubmit = (formData) => {
+    const inputQuantity = Number(formData.inputQuantity);
+    const milkLeft = Number(selectedStorageBatch?.milkLeft);
+
+    if (
+      selectedStorageBatch &&
+      Number.isFinite(milkLeft) &&
+      inputQuantity > milkLeft
+    ) {
+      setError("inputQuantity", {
+        type: "validate",
+        message: `Cannot exceed ${milkLeft} L remaining in this batch.`,
+      });
+      return;
+    }
+
     createMutation.mutate({
       ...formData,
       productType: activeTab,
@@ -300,7 +324,7 @@ export default function MilkProcessing() {
                     <Select {...field} sx={{ borderRadius: "6px", fontSize: "13px" }}>
                       {storageRecords.map((s) => (
                         <MenuItem key={s.batchId} value={s.batchId} sx={{ fontSize: "13px" }}>
-                          {s.batchId} ({s.milkType || "Milk"})
+                          {s.batchId} ({s.milkType || "Milk"} · {s.milkLeft ?? 0} L left)
                         </MenuItem>
                       ))}
                     </Select>
@@ -327,6 +351,20 @@ export default function MilkProcessing() {
                 {...register("inputQuantity", {
                   required: "Input quantity is required",
                   min: { value: 1, message: "Must be greater than 0" },
+                  validate: (value) => {
+                    const quantity = Number(value);
+                    const milkLeft = Number(selectedStorageBatch?.milkLeft);
+
+                    if (
+                      selectedStorageBatch &&
+                      Number.isFinite(milkLeft) &&
+                      quantity > milkLeft
+                    ) {
+                      return `Cannot exceed ${milkLeft} L remaining in this batch.`;
+                    }
+
+                    return true;
+                  },
                 })}
                 error={Boolean(errors.inputQuantity)}
                 helperText={errors.inputQuantity?.message}
@@ -388,9 +426,9 @@ export default function MilkProcessing() {
                         <MenuItem value="" sx={{ fontSize: "13px" }}>
                           <em>Select material (optional)</em>
                         </MenuItem>
-                        {RAW_MATERIAL_OPTIONS.map((m) => (
-                          <MenuItem key={m} value={m} sx={{ fontSize: "13px" }}>
-                            {m}
+                        {rawMaterials.map((m) => (
+                          <MenuItem key={m._id} value={m.material} sx={{ fontSize: "13px" }}>
+                            {m.material} ({m.availableQuantity} {m.unit} available)
                           </MenuItem>
                         ))}
                       </Select>
@@ -772,7 +810,7 @@ export default function MilkProcessing() {
                     sx={{ "&:last-child td, &:last-child th": { border: 0 } }}
                   >
                     <TableCell sx={{ fontSize: "13px", color: "#1F2937" }}>
-                      {row.date}
+                      {formatDisplayDate(row.date)}
                     </TableCell>
                     <TableCell sx={{ fontSize: "13px", fontWeight: 500, color: "#1F2937" }}>
                       {row.processingId}
