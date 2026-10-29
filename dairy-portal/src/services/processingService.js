@@ -46,6 +46,7 @@ export const createProcessingBatch = async (batchData) => {
     rawMaterialsUsed: (batchData.materialsUsed || []).map((material) => ({
       material: material.material,
       quantityUsed: Number(material.quantityUsed ?? material.quantity),
+      unit: material.unit,
     })),
     byProducts: batchData.byProducts || [],
     remarks: batchData.remarks || "",

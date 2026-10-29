@@ -165,7 +165,7 @@ export default function InventoryManagement() {
               </Typography>
             </Typography>
             <Typography sx={{ fontSize: "11px", color: "#6B7280", mt: 0.5 }}>
-              6 main products + 1 by-product
+              {/* {summary.mainProductCount ?? 0} main products + {summary.byProductCount ?? 0} by-products */}
             </Typography>
           </Paper>
         </Grid>
@@ -227,7 +227,7 @@ export default function InventoryManagement() {
               </Typography>
             </Typography>
             <Typography sx={{ fontSize: "11px", color: "#6B7280", mt: 0.5 }}>
-              Citric Acid and Starter Culture
+              {summary.lowStockItems?.join(" and ") || "None"}
             </Typography>
           </Paper>
         </Grid>
@@ -344,7 +344,7 @@ export default function InventoryManagement() {
                     Unit
                   </TableCell>
                   <TableCell sx={{ fontSize: "12px", fontWeight: 600, color: "#6B7280" }}>
-                    Processing Batch
+                    Inventory
                   </TableCell>
                   <TableCell sx={{ fontSize: "12px", fontWeight: 600, color: "#6B7280" }}>
                     Last Updated
@@ -364,7 +364,7 @@ export default function InventoryManagement() {
                 ) : (
                   finishedProducts.map((row) => (
                     <TableRow
-                      key={row.id || row.product}
+                      key={row._id || row.id || `${row.product}-${row.unit}`}
                       hover
                       sx={{ "&:last-child td, &:last-child th": { border: 0 } }}
                     >
@@ -391,8 +391,8 @@ export default function InventoryManagement() {
                       <TableCell sx={{ fontSize: "13px", color: "#4B5563" }}>
                         {row.unit}
                       </TableCell>
-                      <TableCell sx={{ fontSize: "13px", color: "#2563EB", textDecoration: "underline", cursor: "pointer" }}>
-                        {row.processingBatch}
+                      <TableCell sx={{ fontSize: "13px", color: "#4B5563" }}>
+                        Aggregated stock
                       </TableCell>
                       <TableCell sx={{ fontSize: "13px", color: "#4B5563" }}>
                         {row.lastUpdated}
@@ -448,7 +448,7 @@ export default function InventoryManagement() {
                 ) : (
                   rawMaterials.map((row) => (
                     <TableRow
-                      key={row.id || row.material}
+                      key={row._id || row.id || row.material}
                       hover
                       sx={{ "&:last-child td, &:last-child th": { border: 0 } }}
                     >
@@ -500,7 +500,7 @@ export default function InventoryManagement() {
         <Box sx={{ px: 3, py: 1.5, borderTop: "1px solid #F3F4F6" }}>
           <Typography sx={{ fontSize: "11px", color: "#9CA3AF" }}>
             {activeTab === "finished"
-              ? "Quantities shown in each product's inventory unit · Batch IDs link to the producing processing batch."
+              ?               "Finished products are combined by product and unit after processing."
               : "Low Stock indicates materials below their minimum stock level · Packaging counted in pieces."}
           </Typography>
         </Box>

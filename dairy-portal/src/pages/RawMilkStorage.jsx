@@ -87,28 +87,27 @@ export default function RawMilkStorage() {
     formState: { errors },
   } = useForm({
     defaultValues: {
-      batchId: "MR-20261007-004",
+      batchId: "",
       siloNumber: "Silo 01",
       temperature: "4.0",
       storageDate: getLocalDate(),
       storageTime: getLocalTime(),
-      quantity: "1250",
       remarks: "",
     },
   });
 
-  const watchedBatchId = useWatch({ control, name: "batchId", defaultValue: "MR-20261007-004" });
+  const watchedBatchId = useWatch({ control, name: "batchId", defaultValue: "" });
   const watchedSilo = useWatch({ control, name: "siloNumber", defaultValue: "Silo 01" });
+
+  const selectedBatch = useMemo(
+    () => testedBatches.find((batch) => batch.batchId === watchedBatchId),
+    [testedBatches, watchedBatchId]
+  );
 
   // Auto determine milk type from receptions
   const autoMilkType = useMemo(() => {
-    const found = testedBatches.find((r) => r.batchId === watchedBatchId);
-    if (found) return found.milkType;
-    if (watchedBatchId === "MR-20261007-004") return "Cow Milk";
-    if (watchedBatchId === "MR-20261007-003") return "Buffalo Milk";
-    if (watchedBatchId === "MR-20261006-002") return "Goat Milk";
-    return "Cow Milk";
-  }, [watchedBatchId, testedBatches]);
+    return selectedBatch?.milkType || "------";
+  }, [selectedBatch]);
 
   const autoCapacity = useMemo(() => {
     return (siloCapacities[watchedSilo] || 5000).toLocaleString();
@@ -127,12 +126,11 @@ export default function RawMilkStorage() {
         severity: "success",
       });
       reset({
-        batchId: testedBatches[0]?.batchId || "",
+        batchId: "",
         siloNumber: "Silo 01",
         temperature: "4.0",
         storageDate: getLocalDate(),
         storageTime: getLocalTime(),
-        quantity: "",
         remarks: "",
       });
     },
@@ -168,6 +166,7 @@ export default function RawMilkStorage() {
   const onSubmit = (formData) => {
     createMutation.mutate({
       ...formData,
+      quantity: selectedBatch?.quantity,
       milkType: autoMilkType,
       date: formData.storageDate,
       time: formData.storageTime,
@@ -293,22 +292,10 @@ export default function RawMilkStorage() {
 
             {/* Row 4: Quantity (Litres) & Storage Time */}
             <Grid size={{ xs: 12, md: 6 }}>
-              <Typography sx={{ fontSize: "12px", fontWeight: 600, color: "#374151", mb: 0.5 }}>
-                Quantity (Litres)
-              </Typography>
-              <TextField
-                fullWidth
-                size="small"
-                type="number"
-                slotProps={{ htmlInput: { step: "any" } }}
-                placeholder="e.g. 1,250"
-                {...register("quantity", {
-                  required: "Quantity is required",
-                  min: { value: 1, message: "Must be at least 1 L" },
-                })}
-                error={Boolean(errors.quantity)}
-                helperText={errors.quantity?.message}
-                sx={{ "& .MuiOutlinedInput-root": { borderRadius: "6px" } }}
+              <LockedField
+                label="Quantity (Litres)"
+                topSubtitle="Automatically displayed from selected batch"
+                value={selectedBatch?.quantity ?? "------"}
               />
             </Grid>
 
