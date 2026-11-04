@@ -344,9 +344,6 @@ export default function InventoryManagement() {
                     Unit
                   </TableCell>
                   <TableCell sx={{ fontSize: "12px", fontWeight: 600, color: "#6B7280" }}>
-                    Inventory
-                  </TableCell>
-                  <TableCell sx={{ fontSize: "12px", fontWeight: 600, color: "#6B7280" }}>
                     Last Updated
                   </TableCell>
                   <TableCell align="right" sx={{ fontSize: "12px", fontWeight: 600, color: "#6B7280" }}>
@@ -357,7 +354,7 @@ export default function InventoryManagement() {
               <TableBody>
                 {isLoading ? (
                   <TableRow>
-                    <TableCell colSpan={6} align="center" sx={{ py: 3 }}>
+                    <TableCell colSpan={5} align="center" sx={{ py: 3 }}>
                       <CircularProgress size={24} />
                     </TableCell>
                   </TableRow>
@@ -390,9 +387,6 @@ export default function InventoryManagement() {
                       </TableCell>
                       <TableCell sx={{ fontSize: "13px", color: "#4B5563" }}>
                         {row.unit}
-                      </TableCell>
-                      <TableCell sx={{ fontSize: "13px", color: "#4B5563" }}>
-                        Aggregated stock
                       </TableCell>
                       <TableCell sx={{ fontSize: "13px", color: "#4B5563" }}>
                         {row.lastUpdated}
