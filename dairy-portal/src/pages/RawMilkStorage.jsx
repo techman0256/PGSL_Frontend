@@ -39,7 +39,6 @@ import {
   getAvailableBatchesForStorage,
   createStorageRecord,
   deleteStorageRecord,
-  siloCapacities,
 } from "../services/storageService";
 import useAuth from "../context/useAuth";
 import { canDeleteOperationalRecords } from "../auth/roleAccess";
@@ -97,7 +96,6 @@ export default function RawMilkStorage() {
   });
 
   const watchedBatchId = useWatch({ control, name: "batchId", defaultValue: "" });
-  const watchedSilo = useWatch({ control, name: "siloNumber", defaultValue: "Silo 01" });
 
   const selectedBatch = useMemo(
     () => testedBatches.find((batch) => batch.batchId === watchedBatchId),
@@ -108,10 +106,6 @@ export default function RawMilkStorage() {
   const autoMilkType = useMemo(() => {
     return selectedBatch?.milkType || "------";
   }, [selectedBatch]);
-
-  const autoCapacity = useMemo(() => {
-    return (siloCapacities[watchedSilo] || 5000).toLocaleString();
-  }, [watchedSilo]);
 
   const createMutation = useMutation({
     mutationFn: createStorageRecord,
@@ -205,19 +199,11 @@ export default function RawMilkStorage() {
 
         <form onSubmit={handleSubmit(onSubmit)}>
           <Grid container spacing={2.5}>
-            {/* Row 1: Storage Record ID & Silo Capacity */}
+            {/* Row 1: Storage Record ID */}
             <Grid size={{ xs: 12, md: 6 }}>
               <LockedField
                 label="Storage Record ID"
                 placeholder="Auto Generated"
-              />
-            </Grid>
-
-            <Grid size={{ xs: 12, md: 6 }}>
-              <LockedField
-                label="Silo Capacity (Litres)"
-                topSubtitle="Automatically displayed"
-                value={autoCapacity}
               />
             </Grid>
 
@@ -435,9 +421,6 @@ export default function RawMilkStorage() {
                   Date
                 </TableCell>
                 <TableCell sx={{ fontSize: "12px", fontWeight: 600, color: "#6B7280" }}>
-                  Storage Record ID
-                </TableCell>
-                <TableCell sx={{ fontSize: "12px", fontWeight: 600, color: "#6B7280" }}>
                   Milk Batch ID
                 </TableCell>
                 <TableCell sx={{ fontSize: "12px", fontWeight: 600, color: "#6B7280" }}>
@@ -460,13 +443,13 @@ export default function RawMilkStorage() {
             <TableBody>
               {isLoading ? (
                 <TableRow>
-                  <TableCell colSpan={8} align="center" sx={{ py: 3 }}>
+                  <TableCell colSpan={7} align="center" sx={{ py: 3 }}>
                     <CircularProgress size={24} />
                   </TableCell>
                 </TableRow>
               ) : records.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={8} align="center" sx={{ py: 4, color: "#9CA3AF" }}>
+                  <TableCell colSpan={7} align="center" sx={{ py: 4, color: "#9CA3AF" }}>
                     No storage records found.
                   </TableCell>
                 </TableRow>
@@ -479,9 +462,6 @@ export default function RawMilkStorage() {
                   >
                     <TableCell sx={{ fontSize: "13px", color: "#1F2937" }}>
                       {formatDisplayDate(row.date)}
-                    </TableCell>
-                    <TableCell sx={{ fontSize: "13px", fontWeight: 500, color: "#1F2937" }}>
-                      {row.storageRecordId}
                     </TableCell>
                     <TableCell sx={{ fontSize: "13px", color: "#1F2937" }}>
                       {row.batchId}
@@ -528,9 +508,9 @@ export default function RawMilkStorage() {
         </TableContainer>
 
         <Box sx={{ px: 3, py: 1.5, borderTop: "1px solid #F3F4F6" }}>
-          <Typography sx={{ fontSize: "11px", color: "#9CA3AF" }}>
+          {/* <Typography sx={{ fontSize: "11px", color: "#9CA3AF" }}>
             Silo capacities: 01 — 5,000 L · 02 — 2,000 L · 03 — 1,000 L · 04 — 2,000 L. Temperature recorded at storage.
-          </Typography>
+          </Typography> */}
         </Box>
       </Paper>
 

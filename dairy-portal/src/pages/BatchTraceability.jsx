@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import {
   Alert,
   Box,
@@ -210,8 +210,18 @@ function buildFlow(trace) {
 }
 
 export default function BatchTraceability() {
+  const topRef = useRef(null);
   const [input, setInput] = useState("");
   const [batchId, setBatchId] = useState("");
+
+  useEffect(() => {
+    window.scrollTo({ top: 0, left: 0, behavior: "instant" });
+    document.documentElement.scrollTop = 0;
+    document.body.scrollTop = 0;
+    if (topRef.current) {
+      topRef.current.scrollIntoView({ block: "start" });
+    }
+  }, []);
   const traceQuery = useQuery({
     queryKey: ["batch-traceability", batchId],
     queryFn: () => getBatchTraceability(batchId),
@@ -241,7 +251,7 @@ export default function BatchTraceability() {
   };
 
   return (
-    <Box>
+    <Box ref={topRef}>
       <Stack direction={{ xs: "column", sm: "row" }} justifyContent="space-between" alignItems={{ sm: "center" }} gap={2} sx={{ mb: 3 }}>
         <Box>
           <Typography sx={{ fontSize: 24, fontWeight: 700, color: "#111827" }}>Batch Traceability</Typography>
