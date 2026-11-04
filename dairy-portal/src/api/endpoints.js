@@ -18,6 +18,9 @@ const endpoints = {
   },
   dispatches: "/dispatches",
   traceability: "/traceability",
+  dashboard: {
+    summary: "/dashboard/summary",
+  },
 };
 
 export default endpoints;

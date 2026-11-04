@@ -22,9 +22,19 @@ export default function FormDatePicker({ control, name, rules }) {
                 error: Boolean(fieldState.error),
                 helperText: fieldState.error?.message,
                 sx: {
+                  bgcolor: "#FFFFFF",
+                  "& .MuiInputBase-root": {
+                    bgcolor: "#FFFFFF",
+                  },
                   "& .MuiOutlinedInput-root": {
                     borderRadius: "6px",
-                    bgcolor: "#FFF",
+                    bgcolor: "#FFFFFF",
+                    "& input": {
+                      backgroundColor: "#FFFFFF",
+                    },
+                    "& .MuiInputAdornment-root": {
+                      backgroundColor: "#FFFFFF",
+                    },
                     "&.Mui-focused .MuiOutlinedInput-notchedOutline": {
                       borderColor: "#2D5A43",
                     },
