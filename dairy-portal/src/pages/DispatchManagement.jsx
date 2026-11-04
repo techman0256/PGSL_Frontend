@@ -35,6 +35,8 @@ import ContractNotice from "../components/common/ContractNotice";
 import RecordDetailsDialog from "../components/common/RecordDetailsDialog";
 import DeleteConfirmDialog from "../components/common/DeleteConfirmDialog";
 import FormDateTimePicker from "../components/common/FormDateTimePicker";
+import useAuth from "../context/useAuth";
+import { canDeleteOperationalRecords } from "../auth/roleAccess";
 
 import {
   getDispatches,
@@ -53,6 +55,8 @@ const UNIT_OPTIONS = ["L", "Kg", "Units"];
 
 export default function DispatchManagement() {
   const queryClient = useQueryClient();
+  const { user } = useAuth();
+  const canDeleteDispatches = canDeleteOperationalRecords(user?.role);
 
   const [selectedRecord, setSelectedRecord] = useState(null);
   const [deleteTargetId, setDeleteTargetId] = useState(null);
@@ -521,15 +525,17 @@ export default function DispatchManagement() {
                           <VisibilityOutlinedIcon fontSize="small" />
                         </IconButton>
                       </Tooltip>
-                      <Tooltip title="Delete">
-                        <IconButton
-                          size="small"
-                          onClick={() => setDeleteTargetId(row.id || row.dispatchId)}
-                          sx={{ color: "#9CA3AF", "&:hover": { color: "#DC2626" } }}
-                        >
-                          <DeleteOutlineOutlinedIcon fontSize="small" />
-                        </IconButton>
-                      </Tooltip>
+                      {canDeleteDispatches && (
+                        <Tooltip title="Delete">
+                          <IconButton
+                            size="small"
+                            onClick={() => setDeleteTargetId(row.id || row.dispatchId)}
+                            sx={{ color: "#9CA3AF", "&:hover": { color: "#DC2626" } }}
+                          >
+                            <DeleteOutlineOutlinedIcon fontSize="small" />
+                          </IconButton>
+                        </Tooltip>
+                      )}
                     </TableCell>
                   </TableRow>
                 ))
@@ -554,12 +560,14 @@ export default function DispatchManagement() {
       />
 
       {/* Delete Confirmation */}
-      <DeleteConfirmDialog
-        open={Boolean(deleteTargetId)}
-        onClose={() => setDeleteTargetId(null)}
-        onConfirm={() => deleteMutation.mutate(deleteTargetId)}
-        loading={deleteMutation.isPending}
-      />
+      {canDeleteDispatches && (
+        <DeleteConfirmDialog
+          open={Boolean(deleteTargetId)}
+          onClose={() => setDeleteTargetId(null)}
+          onConfirm={() => deleteMutation.mutate(deleteTargetId)}
+          loading={deleteMutation.isPending}
+        />
+      )}
 
       {/* Feedback Snackbar */}
       <Snackbar

@@ -38,6 +38,8 @@ import RecordDetailsDialog from "../components/common/RecordDetailsDialog";
 import DeleteConfirmDialog from "../components/common/DeleteConfirmDialog";
 import FormDatePicker from "../components/common/FormDatePicker";
 import FormTimePicker from "../components/common/FormTimePicker";
+import useAuth from "../context/useAuth";
+import { canDeleteOperationalRecords } from "../auth/roleAccess";
 
 import {
   getProcessingBatches,
@@ -65,6 +67,8 @@ const BY_PRODUCT_OPTIONS = ["Cream", "Whey", "Buttermilk", "Skimmed Milk"];
 
 export default function MilkProcessing() {
   const queryClient = useQueryClient();
+  const { user } = useAuth();
+  const canDeleteProcessingBatches = canDeleteOperationalRecords(user?.role);
 
   const [selectedRecord, setSelectedRecord] = useState(null);
   const [deleteTargetId, setDeleteTargetId] = useState(null);
@@ -840,15 +844,17 @@ export default function MilkProcessing() {
                           <VisibilityOutlinedIcon fontSize="small" />
                         </IconButton>
                       </Tooltip>
-                      <Tooltip title="Delete">
-                        <IconButton
-                          size="small"
-                          onClick={() => setDeleteTargetId(row.id || row.processingId)}
-                          sx={{ color: "#9CA3AF", "&:hover": { color: "#DC2626" } }}
-                        >
-                          <DeleteOutlineOutlinedIcon fontSize="small" />
-                        </IconButton>
-                      </Tooltip>
+                      {canDeleteProcessingBatches && (
+                        <Tooltip title="Delete">
+                          <IconButton
+                            size="small"
+                            onClick={() => setDeleteTargetId(row.id || row.processingId)}
+                            sx={{ color: "#9CA3AF", "&:hover": { color: "#DC2626" } }}
+                          >
+                            <DeleteOutlineOutlinedIcon fontSize="small" />
+                          </IconButton>
+                        </Tooltip>
+                      )}
                     </TableCell>
                   </TableRow>
                 ))
@@ -873,12 +879,14 @@ export default function MilkProcessing() {
       />
 
       {/* Delete Confirmation */}
-      <DeleteConfirmDialog
-        open={Boolean(deleteTargetId)}
-        onClose={() => setDeleteTargetId(null)}
-        onConfirm={() => deleteMutation.mutate(deleteTargetId)}
-        loading={deleteMutation.isPending}
-      />
+      {canDeleteProcessingBatches && (
+        <DeleteConfirmDialog
+          open={Boolean(deleteTargetId)}
+          onClose={() => setDeleteTargetId(null)}
+          onConfirm={() => deleteMutation.mutate(deleteTargetId)}
+          loading={deleteMutation.isPending}
+        />
+      )}
 
       {/* Feedback Snackbar */}
       <Snackbar
