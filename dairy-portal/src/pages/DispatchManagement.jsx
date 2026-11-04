@@ -22,7 +22,7 @@ import {
   MenuItem,
   Select,
   FormControl,
-  Chip,
+
 } from "@mui/material";
 
 import VisibilityOutlinedIcon from "@mui/icons-material/VisibilityOutlined";
@@ -181,27 +181,13 @@ export default function DispatchManagement() {
   return (
     <Box sx={{ width: "100%", maxWidth: 1160, mx: "auto", p: { xs: 1, md: 2 } }}>
       {/* Page Header */}
-      <Box sx={{ mb: 3, display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
-        <Box>
-          <Typography variant="h5" sx={{ fontWeight: 700, color: "#111827", mb: 0.5 }}>
-            Dispatch Management
-          </Typography>
-          <Typography sx={{ fontSize: "13px", color: "#6B7280" }}>
-            Manage finished product dispatches and record sales revenue.
-          </Typography>
-        </Box>
-
-        <Chip
-          label="Stage 6 · Final stage"
-          size="small"
-          sx={{
-            bgcolor: "#EBF3ED",
-            color: "#2D5A43",
-            fontWeight: 600,
-            fontSize: "12px",
-            borderRadius: "6px",
-          }}
-        />
+      <Box sx={{ mb: 3 }}>
+        <Typography variant="h5" sx={{ fontWeight: 700, color: "#111827", mb: 0.5 }}>
+          Dispatch Management
+        </Typography>
+        <Typography sx={{ fontSize: "13px", color: "#6B7280" }}>
+          Manage finished product dispatches and record sales revenue.
+        </Typography>
       </Box>
 
       {/* Contract Notice */}
@@ -309,16 +295,8 @@ export default function DispatchManagement() {
               </Typography>
             </Grid>
 
-            {/* Row 2: Processing Batch ID, Customer / Buyer, Channel */}
-            <Grid size={{ xs: 12, md: 4 }}>
-              <LockedField
-                label="Processing Batch ID"
-                value={selectedProductInfo.processingBatch}
-                bottomNote="Auto-linked from the selected product"
-              />
-            </Grid>
-
-            <Grid size={{ xs: 12, md: 4 }}>
+            {/* Row 2: Customer / Buyer, Channel */}
+            <Grid size={{ xs: 12, md: 6 }}>
               <Typography sx={{ fontSize: "12px", fontWeight: 600, color: "#374151", mb: 0.5 }}>
                 Customer / Buyer
               </Typography>
@@ -332,8 +310,7 @@ export default function DispatchManagement() {
                 sx={{ "& .MuiOutlinedInput-root": { borderRadius: "6px" } }}
               />
             </Grid>
-
-            <Grid size={{ xs: 12, md: 4 }}>
+            <Grid size={{ xs: 12, md: 6 }}>
               <Typography sx={{ fontSize: "12px", fontWeight: 600, color: "#374151", mb: 0.5 }}>
                 Channel
               </Typography>
