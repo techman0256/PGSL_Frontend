@@ -26,6 +26,7 @@ const BACKEND_KEYS = new Set([
   "backendPersisted",
   "contractNotice",
   "__version",
+  "inventory",
 ]);
 
 // Map to provide clean user-facing labels
