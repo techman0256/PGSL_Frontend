@@ -7,6 +7,10 @@ import {
   CardContent,
   Chip,
   CircularProgress,
+  Dialog,
+  DialogActions,
+  DialogContent,
+  DialogTitle,
   Grid,
   Paper,
   Stack,
@@ -21,6 +25,8 @@ import {
 } from "@mui/material";
 import SearchIcon from "@mui/icons-material/Search";
 import AccountTreeOutlinedIcon from "@mui/icons-material/AccountTreeOutlined";
+import CloseIcon from "@mui/icons-material/Close";
+import OpenInFullIcon from "@mui/icons-material/OpenInFull";
 import {
   Background,
   Controls,
@@ -66,7 +72,7 @@ function TraceFlowNode({ data }) {
       : node.type === "storage"
         ? `${node.siloNumber} · ${formatNumber(node.quantity)} L`
         : node.type === "processing"
-          ? node.batchId
+          ? `${node.product || "Processed product"} · ${node.batchId}`
           : node.type === "dispatch"
             ? `${node.dispatchId} · ${node.customer}`
             : `${node.product} · ${formatNumber(node.quantity)} ${node.unit}`;
@@ -141,16 +147,16 @@ function buildFlow(trace) {
   addNode(quality, 300, 180);
   addNode(storage, 600, 180);
   processing.forEach((branch, index) => {
-    const branchY = 80 + index * 260;
+    const branchY = 100 + index * 160;
     addNode(branch, 950, branchY);
     nodes
       .filter((node) => edges.some((edge) => edge.from === branch.id && edge.to === node.id))
       .forEach((output, outputIndex) => {
-        const outputY = branchY - 100 + outputIndex * 130;
+        const outputY = branchY - 55 + outputIndex * 90;
         addNode(output, 1300, outputY);
         nodes
           .filter((node) => edges.some((edge) => edge.from === output.id && edge.to === node.id))
-          .forEach((dispatch, dispatchIndex) => addNode(dispatch, 1650, outputY + dispatchIndex * 100));
+          .forEach((dispatch, dispatchIndex) => addNode(dispatch, 1650, outputY + dispatchIndex * 70));
       });
   });
 
@@ -214,6 +220,7 @@ export default function BatchTraceability() {
   const topRef = useRef(null);
   const [input, setInput] = useState("");
   const [batchId, setBatchId] = useState("");
+  const [graphDialogOpen, setGraphDialogOpen] = useState(false);
 
   useEffect(() => {
     window.scrollTo({ top: 0, left: 0, behavior: "instant" });
@@ -297,8 +304,6 @@ export default function BatchTraceability() {
               {[
                 ["Received", `${formatNumber(trace.rootBatch.quantity)} ${trace.rootBatch.unit}`],
                 ["Processed", `${formatNumber(trace.summary.inputQuantity)} L`],
-                ["Outputs", `${trace.summary.finishedProductCount} products`],
-                ["Dispatched", `${formatNumber(trace.summary.dispatchedQuantity)} total`],
               ].map(([label, value]) => (
                 <Grid item xs={6} md={3} key={label}>
                   <Typography sx={{ fontSize: 11, color: "#6B7280" }}>{label}</Typography>
@@ -316,9 +321,20 @@ export default function BatchTraceability() {
                   Drag, zoom, and pan to inspect each processing split.
                 </Typography>
               </Box>
-              <Typography sx={{ display: { xs: "none", md: "block" }, fontSize: 11, color: "#6B7280" }}>
-                {flow.nodes.length} nodes · {flow.edges.length} connections
-              </Typography>
+              <Stack direction="row" spacing={1.5} alignItems="center">
+                <Typography sx={{ display: { xs: "none", md: "block" }, fontSize: 11, color: "#6B7280" }}>
+                  {flow.nodes.length} nodes · {flow.edges.length} connections
+                </Typography>
+                <Button
+                  size="small"
+                  variant="outlined"
+                  startIcon={<OpenInFullIcon sx={{ fontSize: 16 }} />}
+                  onClick={() => setGraphDialogOpen(true)}
+                  sx={{ textTransform: "none", fontSize: 12, borderRadius: "6px" }}
+                >
+                  Open larger view
+                </Button>
+              </Stack>
             </Stack>
             <Box sx={{ height: { xs: 620, md: 680 }, borderRadius: 1, overflow: "hidden", bgcolor: "#F8FAFC" }}>
               <ReactFlow
@@ -339,6 +355,51 @@ export default function BatchTraceability() {
               </ReactFlow>
             </Box>
           </Paper>
+
+          <Dialog
+            open={graphDialogOpen}
+            onClose={() => setGraphDialogOpen(false)}
+            fullWidth
+            maxWidth="xl"
+          >
+            <DialogTitle sx={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+              <Typography component="span" sx={{ fontWeight: 700 }}>
+                Batch lineage graph
+              </Typography>
+              <Button
+                aria-label="Close larger graph view"
+                onClick={() => setGraphDialogOpen(false)}
+                sx={{ minWidth: 0, p: 0.5, color: "#6B7280" }}
+              >
+                <CloseIcon fontSize="small" />
+              </Button>
+            </DialogTitle>
+            <DialogContent sx={{ p: 1 }}>
+              <Box sx={{ height: "72vh", minHeight: 520, borderRadius: 1, overflow: "hidden", bgcolor: "#F8FAFC" }}>
+                <ReactFlow
+                  nodes={flow.nodes}
+                  edges={flow.edges}
+                  nodeTypes={nodeTypes}
+                  fitView
+                  fitViewOptions={{ padding: 0.2, minZoom: 0.45 }}
+                  minZoom={0.25}
+                  maxZoom={1.5}
+                  nodesDraggable
+                  nodesConnectable={false}
+                  elementsSelectable
+                >
+                  <MiniMap nodeColor={(node) => nodeColor[node.data?.node?.type] || "#94A3B8"} />
+                  <Controls position="top-left" />
+                  <Background gap={20} size={1} color="#E2E8F0" />
+                </ReactFlow>
+              </Box>
+            </DialogContent>
+            <DialogActions>
+              <Button onClick={() => setGraphDialogOpen(false)} sx={{ textTransform: "none" }}>
+                Close
+              </Button>
+            </DialogActions>
+          </Dialog>
 
           <Paper sx={{ border: "1px solid #E5E7EB", boxShadow: "none" }}>
             <Box sx={{ p: 2, pb: 1 }}>
