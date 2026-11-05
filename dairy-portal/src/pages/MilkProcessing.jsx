@@ -53,6 +53,7 @@ import {
   getLocalTime,
   formatDisplayDate,
 } from "../utils/dateTime";
+import { getErrorMessage } from "../utils/errorMessage";
 
 const DEFAULT_PRODUCTS = [
   "Liquid Milk",
@@ -222,7 +223,7 @@ export default function MilkProcessing() {
     onError: (err) => {
       setSnackbar({
         open: true,
-        message: err.message || "Failed to record processing batch",
+        message: getErrorMessage(err, "Failed to record processing batch"),
         severity: "error",
       });
     },
@@ -243,7 +244,7 @@ export default function MilkProcessing() {
     onError: (err) => {
       setSnackbar({
         open: true,
-        message: err.message || "Failed to delete processing batch",
+        message: getErrorMessage(err, "Failed to delete processing batch"),
         severity: "error",
       });
     },

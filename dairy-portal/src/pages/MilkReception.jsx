@@ -26,7 +26,6 @@ import {
 
 import VisibilityOutlinedIcon from "@mui/icons-material/VisibilityOutlined";
 import DeleteOutlineOutlinedIcon from "@mui/icons-material/DeleteOutlineOutlined";
-import EditOutlinedIcon from "@mui/icons-material/EditOutlined";
 
 import ContractNotice from "../components/common/ContractNotice";
 import RecordDetailsDialog from "../components/common/RecordDetailsDialog";
@@ -38,7 +37,6 @@ import FormTimePicker from "../components/common/FormTimePicker";
 import {
   getReceptions,
   createReception,
-  updateReception,
   deleteReception,
   normalizeMilkBatch,
 } from "../services/receptionService";
@@ -50,6 +48,7 @@ import {
   getLocalTime,
   formatDisplayDate,
 } from "../utils/dateTime";
+import { getErrorMessage } from "../utils/errorMessage";
 
 const MILK_TYPES = ["Cow", "Buffalo", "Goat", "Sahiwal"];
 const SHIFTS = ["Morning", "Evening"];
@@ -61,7 +60,6 @@ export default function MilkReception() {
 
   const [selectedRecord, setSelectedRecord] = useState(null);
   const [deleteTargetId, setDeleteTargetId] = useState(null);
-  const [editingBatchId, setEditingBatchId] = useState(null);
   const [snackbar, setSnackbar] = useState({ open: false, message: "", severity: "success" });
 
   const {
@@ -127,41 +125,7 @@ export default function MilkReception() {
     onError: (err) => {
       setSnackbar({
         open: true,
-        message: err.message || "Failed to record milk reception",
-        severity: "error",
-      });
-    },
-  });
-
-  const updateMutation = useMutation({
-    mutationFn: updateReception,
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["receptions"] });
-      queryClient.invalidateQueries({ queryKey: ["quality-test-available-batches"] });
-      queryClient.invalidateQueries({ queryKey: ["dashboard-data"] });
-      setEditingBatchId(null);
-      setSnackbar({
-        open: true,
-        message: "Milk batch updated successfully.",
-        severity: "success",
-      });
-      reset({
-        milkBatchId: "",
-        milkType: "Cow",
-        quantity: "",
-        date: getLocalDate(),
-        shift: "Morning",
-        time: getLocalTime(),
-        remarks: "",
-      });
-    },
-    onError: (err) => {
-      setSnackbar({
-        open: true,
-        message:
-          err.response?.data?.message ||
-          err.message ||
-          "Failed to update milk batch.",
+        message: getErrorMessage(err, "Failed to record milk reception"),
         severity: "error",
       });
     },
@@ -181,39 +145,15 @@ export default function MilkReception() {
     onError: (err) => {
       setSnackbar({
         open: true,
-        message: err.message || "Failed to delete reception record",
+        message:
+          getErrorMessage(err, "Failed to delete reception record"),
         severity: "error",
       });
     },
   });
 
   const onSubmit = (formData) => {
-    if (editingBatchId) {
-      updateMutation.mutate({ id: editingBatchId, ...formData });
-    } else {
-      createMutation.mutate(formData);
-    }
-  };
-
-  const startEditing = (batch) => {
-    const receivedAt = new Date(batch.receivedAt);
-    const date = Number.isNaN(receivedAt.getTime())
-      ? getLocalDate()
-      : `${receivedAt.getFullYear()}-${String(receivedAt.getMonth() + 1).padStart(2, "0")}-${String(receivedAt.getDate()).padStart(2, "0")}`;
-    const time = Number.isNaN(receivedAt.getTime())
-      ? getLocalTime()
-      : `${String(receivedAt.getHours()).padStart(2, "0")}:${String(receivedAt.getMinutes()).padStart(2, "0")}`;
-
-    setEditingBatchId(batch.id);
-    reset({
-      milkBatchId: batch.batchId,
-      milkType: batch.milkType,
-      quantity: String(batch.quantity),
-      date,
-      shift: batch.shift,
-      time,
-      remarks: batch.remarks || "",
-    });
+    createMutation.mutate(formData);
   };
 
   return (
@@ -232,16 +172,15 @@ export default function MilkReception() {
       <ContractNotice notice={contractNotice} backendPersisted={backendPersisted} />
       {receptionQueryFailed && (
         <Alert severity="error" sx={{ mb: 2 }}>
-          {receptionQueryError.response?.data?.message ||
-            receptionQueryError.message ||
-            "Could not load milk batches."}
+          {getErrorMessage(receptionQueryError, "Could not load milk batches.")}
         </Alert>
       )}
       {selectedBatchQuery.isError && (
         <Alert severity="error" sx={{ mb: 2 }}>
-          {selectedBatchQuery.error.response?.data?.message ||
-            selectedBatchQuery.error.message ||
-            "Could not load the selected milk batch."}
+          {getErrorMessage(
+            selectedBatchQuery.error,
+            "Could not load the selected milk batch."
+          )}
         </Alert>
       )}
 
@@ -257,7 +196,7 @@ export default function MilkReception() {
         }}
       >
         <Typography sx={{ fontSize: "15px", fontWeight: 700, color: "#111827", mb: 2.5 }}>
-          {editingBatchId ? "Update Milk Batch" : "New Milk Reception"}
+          New Milk Reception
         </Typography>
 
         <form onSubmit={handleSubmit(onSubmit)}>
@@ -266,7 +205,7 @@ export default function MilkReception() {
             <Grid size={{ xs: 12, md: 6 }}>
               <LockedField
                 label="Milk Batch ID"
-                value={editingBatchId ? selectedRecord?.batchId : ""}
+                value=""
                 bottomNote="Auto-generated when the reception is saved"
               />
             </Grid>
@@ -382,7 +321,7 @@ export default function MilkReception() {
             <Button
               type="submit"
               variant="contained"
-              disabled={createMutation.isPending || updateMutation.isPending}
+              disabled={createMutation.isPending}
               sx={{
                 bgcolor: "#2D5A43",
                 "&:hover": { bgcolor: "#244835" },
@@ -396,24 +335,12 @@ export default function MilkReception() {
                 boxShadow: "none",
               }}
             >
-              {createMutation.isPending || updateMutation.isPending ? (
+              {createMutation.isPending ? (
                 <CircularProgress size={20} color="inherit" />
               ) : (
-                editingBatchId ? "Save Changes" : "Save Reception"
+                "Save Reception"
               )}
             </Button>
-            {editingBatchId && (
-              <Button
-                type="button"
-                onClick={() => {
-                  setEditingBatchId(null);
-                  reset();
-                }}
-                sx={{ ml: 1, textTransform: "none" }}
-              >
-                Cancel
-              </Button>
-            )}
           </Box>
         </form>
       </Paper>
@@ -515,17 +442,6 @@ export default function MilkReception() {
                           <VisibilityOutlinedIcon fontSize="small" />
                         </IconButton>
                       </Tooltip>
-                      {user?.role?.toUpperCase() === "ADMIN" && (
-                        <Tooltip title="Edit Batch">
-                          <IconButton
-                            size="small"
-                            onClick={() => startEditing(row)}
-                            sx={{ color: "#6B7280", "&:hover": { color: "#2D5A43" } }}
-                          >
-                            <EditOutlinedIcon fontSize="small" />
-                          </IconButton>
-                        </Tooltip>
-                      )}
                       {canDeleteBatches && (
                         <Tooltip title="Delete">
                           <IconButton
@@ -546,9 +462,9 @@ export default function MilkReception() {
         </TableContainer>
 
         <Box sx={{ px: 3, py: 1.5, borderTop: "1px solid #F3F4F6" }}>
-          <Typography sx={{ fontSize: "11px", color: "#9CA3AF" }}>
+          {/* <Typography sx={{ fontSize: "11px", color: "#9CA3AF" }}>
             Quantity in litres · All amounts in INR · Total cost = quantity × price per litre.
-          </Typography>
+          </Typography> */}
         </Box>
       </Paper>
 

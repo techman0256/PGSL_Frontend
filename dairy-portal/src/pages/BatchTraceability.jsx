@@ -33,6 +33,7 @@ import {
 import "@xyflow/react/dist/style.css";
 import { useQuery } from "@tanstack/react-query";
 import { getBatchTraceability } from "../services/traceabilityService";
+import { getErrorMessage } from "../utils/errorMessage";
 
 const formatNumber = (value) => Number(value || 0).toLocaleString();
 
@@ -279,7 +280,11 @@ export default function BatchTraceability() {
       </Paper>
 
       {traceQuery.isLoading && <Box sx={{ display: "grid", placeItems: "center", py: 8 }}><CircularProgress /></Box>}
-      {traceQuery.isError && <Alert severity="error">{traceQuery.error.response?.data?.message || traceQuery.error.message}</Alert>}
+      {traceQuery.isError && (
+        <Alert severity="error">
+          {getErrorMessage(traceQuery.error, "Unable to load batch traceability.")}
+        </Alert>
+      )}
 
       {trace && flow && (
         <Stack gap={2.5}>

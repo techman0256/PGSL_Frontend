@@ -46,6 +46,7 @@ import {
   getLocalTime,
   formatDisplayDate,
 } from "../utils/dateTime";
+import { getErrorMessage } from "../utils/errorMessage";
 
 export default function QualityTesting() {
   const queryClient = useQueryClient();
@@ -120,7 +121,7 @@ export default function QualityTesting() {
     onError: (err) => {
       setSnackbar({
         open: true,
-        message: err.message || "Failed to record quality test",
+        message: getErrorMessage(err, "Failed to record quality test"),
         severity: "error",
       });
     },
@@ -140,7 +141,7 @@ export default function QualityTesting() {
     onError: (err) => {
       setSnackbar({
         open: true,
-        message: err.message || "Failed to delete quality test record",
+        message: getErrorMessage(err, "Failed to delete quality test record"),
         severity: "error",
       });
     },
@@ -166,9 +167,10 @@ export default function QualityTesting() {
       <ContractNotice notice={contractNotice} backendPersisted={backendPersisted} />
       {availableBatchesError && (
         <Alert severity="error" sx={{ mb: 2 }}>
-          {availableBatchesErrorDetails.response?.data?.message ||
-            availableBatchesErrorDetails.message ||
-            "Could not load batches ready for quality testing."}
+          {getErrorMessage(
+            availableBatchesErrorDetails,
+            "Could not load batches ready for quality testing."
+          )}
         </Alert>
       )}
 

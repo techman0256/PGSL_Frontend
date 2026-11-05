@@ -13,6 +13,7 @@ import Visibility from "@mui/icons-material/Visibility";
 import VisibilityOff from "@mui/icons-material/VisibilityOff";
 import api from "../api/axios";
 import endpoints from "../api/endpoints";
+import { getErrorMessage } from "../utils/errorMessage";
 function Signup() {
   const navigate = useNavigate();
   const [formData, setFormData] = useState({
@@ -63,10 +64,7 @@ function Signup() {
       });
     } catch (err) {
       setError(
-        err.response?.data?.message ||
-          err.response?.data?.error ||
-          err.message ||
-          "Registration failed."
+        getErrorMessage(err, "Registration failed.")
       );
     } finally {
       setLoading(false);

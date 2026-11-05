@@ -44,6 +44,7 @@ import {
   getInventory,
   addRawMaterial,
 } from "../services/inventoryService";
+import { getErrorMessage } from "../utils/errorMessage";
 
 const TAB_OPTIONS = [
   { value: "finished", label: "Finished Products" },
@@ -112,7 +113,7 @@ export default function InventoryManagement() {
     onError: (err) => {
       setSnackbar({
         open: true,
-        message: err.message || "Failed to add raw material",
+        message: getErrorMessage(err, "Failed to add raw material"),
         severity: "error",
       });
     },

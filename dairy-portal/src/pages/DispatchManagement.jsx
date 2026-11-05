@@ -48,6 +48,7 @@ import {
   getLocalDateTime,
   formatDisplayDateTime,
 } from "../utils/dateTime";
+import { getErrorMessage } from "../utils/errorMessage";
 
 const CHANNEL_OPTIONS = ["Retail", "Wholesale", "Distributor"];
 const UNIT_OPTIONS = ["L", "Kg", "Units"];
@@ -138,9 +139,7 @@ export default function DispatchManagement() {
       setSnackbar({
         open: true,
         message:
-          err.response?.data?.message ||
-          err.message ||
-          "Failed to create dispatch",
+          getErrorMessage(err, "Failed to create dispatch"),
         severity: "error",
       });
     },
@@ -163,9 +162,7 @@ export default function DispatchManagement() {
       setSnackbar({
         open: true,
         message:
-          err.response?.data?.message ||
-          err.message ||
-          "Failed to delete dispatch",
+          getErrorMessage(err, "Failed to delete dispatch"),
         severity: "error",
       });
     },
@@ -522,9 +519,9 @@ export default function DispatchManagement() {
         </TableContainer>
 
         <Box sx={{ px: 3, py: 1.5, borderTop: "1px solid #F3F4F6" }}>
-          <Typography sx={{ fontSize: "11px", color: "#9CA3AF" }}>
+          {/* <Typography sx={{ fontSize: "11px", color: "#9CA3AF" }}>
             Revenue in INR · Quantities use each product's inventory unit · New dispatch above is not included.
-          </Typography>
+          </Typography> */}
         </Box>
       </Paper>
 

@@ -47,6 +47,7 @@ import {
   getLocalTime,
   formatDisplayDate,
 } from "../utils/dateTime";
+import { getErrorMessage } from "../utils/errorMessage";
 
 const SILOS = ["Silo 01", "Silo 02", "Silo 03", "Silo 04"];
 
@@ -131,7 +132,7 @@ export default function RawMilkStorage() {
     onError: (err) => {
       setSnackbar({
         open: true,
-        message: err.message || "Failed to save storage record",
+        message: getErrorMessage(err, "Failed to save storage record"),
         severity: "error",
       });
     },
@@ -151,7 +152,7 @@ export default function RawMilkStorage() {
     onError: (err) => {
       setSnackbar({
         open: true,
-        message: err.message || "Failed to delete storage record",
+        message: getErrorMessage(err, "Failed to delete storage record"),
         severity: "error",
       });
     },
