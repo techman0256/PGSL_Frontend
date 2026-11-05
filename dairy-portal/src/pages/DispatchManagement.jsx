@@ -29,7 +29,6 @@ import VisibilityOutlinedIcon from "@mui/icons-material/VisibilityOutlined";
 import DeleteOutlineOutlinedIcon from "@mui/icons-material/DeleteOutlineOutlined";
 import InfoOutlinedIcon from "@mui/icons-material/InfoOutlined";
 
-import SegmentedToggle from "../components/common/SegmentedToggle";
 import LockedField from "../components/common/LockedField";
 import ContractNotice from "../components/common/ContractNotice";
 import RecordDetailsDialog from "../components/common/RecordDetailsDialog";
@@ -51,9 +50,6 @@ import {
 import { getErrorMessage } from "../utils/errorMessage";
 
 const CHANNEL_OPTIONS = ["Retail", "Wholesale", "Distributor"];
-const UNIT_OPTIONS = ["L", "Kg", "Units"];
-
-
 export default function DispatchManagement() {
   const queryClient = useQueryClient();
   const { user } = useAuth();
@@ -242,16 +238,13 @@ export default function DispatchManagement() {
                     >
                       {finishedProducts.map((p) => (
                         <MenuItem key={p.product} value={p.product} sx={{ fontSize: "13px" }}>
-                          {p.product}
+                          {p.product} ({p.availableQuantity ?? 0} {p.unit || "-"})
                         </MenuItem>
                       ))}
                     </Select>
                   </FormControl>
                 )}
               />
-              <Typography sx={{ fontSize: "11px", color: "#6B7280", mt: 0.5 }}>
-                {selectedProductInfo.quantity} {selectedProductInfo.unit} in snapshot · 468 {selectedProductInfo.unit} available
-              </Typography>
             </Grid>
 
             <Grid size={{ xs: 12, md: 3 }}>
@@ -278,15 +271,8 @@ export default function DispatchManagement() {
             </Grid>
 
             <Grid size={{ xs: 12, md: 3 }}>
-              <Typography sx={{ fontSize: "12px", fontWeight: 600, color: "#374151", mb: 0.5 }}>
-                Unit
-              </Typography>
-              <SegmentedToggle
-                options={UNIT_OPTIONS}
-                value={watchedUnit || "L"}
-                onChange={(val) => setValue("unit", val)}
-                fullWidth
-              />
+              <input type="hidden" {...register("unit")} />
+              <LockedField label="Unit" value={watchedUnit || selectedProductInfo.unit || "-"} />
               <Typography sx={{ fontSize: "11px", color: "#6B7280", mt: 0.5 }}>
                 Use the selected product's inventory unit
               </Typography>

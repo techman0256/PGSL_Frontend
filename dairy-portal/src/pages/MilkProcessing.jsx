@@ -47,22 +47,13 @@ import {
   createProcessingBatch,
   deleteProcessingBatch,
 } from "../services/processingService";
-import { getRawMaterials } from "../services/inventoryService";
+import { getRawMaterials, getFinishedProducts } from "../services/inventoryService";
 import {
   getLocalDate,
   getLocalTime,
   formatDisplayDate,
 } from "../utils/dateTime";
 import { getErrorMessage } from "../utils/errorMessage";
-
-const DEFAULT_PRODUCTS = [
-  "Liquid Milk",
-  "Curd",
-  "Butter",
-  "Ghee",
-  "Paneer",
-  "Goat Cheese",
-];
 
 const BY_PRODUCT_OPTIONS = ["Cream", "Whey", "Buttermilk", "Skimmed Milk"];
 
@@ -75,7 +66,6 @@ export default function MilkProcessing() {
   const [deleteTargetId, setDeleteTargetId] = useState(null);
   const [snackbar, setSnackbar] = useState({ open: false, message: "", severity: "success" });
 
-  const [productTabs, setProductTabs] = useState(DEFAULT_PRODUCTS);
   const [activeTab, setActiveTab] = useState("Liquid Milk");
 
   const {
@@ -94,6 +84,10 @@ export default function MilkProcessing() {
   const { data: rawMaterials = [] } = useQuery({
     queryKey: ["inventory-raw-materials"],
     queryFn: getRawMaterials,
+  });
+  const { data: finishedProducts = [] } = useQuery({
+    queryKey: ["inventory-finished-products"],
+    queryFn: getFinishedProducts,
   });
 
   const batches = processingQueryData?.data || [];
@@ -140,6 +134,20 @@ export default function MilkProcessing() {
   const watchedMaterialQty = useWatch({ control, name: "materialQty", defaultValue: "" });
   const watchedByProductType = useWatch({ control, name: "byProductType", defaultValue: "" });
   const watchedByProductQty = useWatch({ control, name: "byProductQty", defaultValue: "" });
+  const selectedMaterial = useMemo(
+    () => rawMaterials.find((material) => material.material === watchedMaterialType),
+    [rawMaterials, watchedMaterialType]
+  );
+  const processableProducts = useMemo(
+    () => finishedProducts.filter((product) => !product.isByProduct),
+    [finishedProducts]
+  );
+  const selectedProduct = useMemo(
+    () => processableProducts.find((product) => product.product === activeTab) ||
+      processableProducts[0],
+    [activeTab, processableProducts]
+  );
+  const activeProductName = selectedProduct?.product || "";
 
   const selectedStorageBatch = useMemo(
     () => storageRecords.find((s) => s.batchId === watchedBatchId),
@@ -156,15 +164,8 @@ export default function MilkProcessing() {
 
   const handleProductTypeChange = (nextProduct) => {
     setActiveTab(nextProduct);
-    setValue("unit", nextProduct === "Liquid Milk" ? "L" : "Kg");
-  };
-
-  const handleAddTab = () => {
-    const newName = prompt("Enter new product type name:");
-    if (newName && !productTabs.includes(newName.trim())) {
-      setProductTabs([...productTabs, newName.trim()]);
-      handleProductTypeChange(newName.trim());
-    }
+    const product = processableProducts.find((item) => item.product === nextProduct);
+    setValue("unit", product?.unit || "L");
   };
 
   const handleAddMaterialItem = () => {
@@ -209,7 +210,7 @@ export default function MilkProcessing() {
         processingDate: getLocalDate(),
         processingTime: getLocalTime(),
         outputQuantity: "",
-        unit: "L",
+        unit: processableProducts[0]?.unit || "L",
         remarks: "",
         materialType: "",
         materialQty: "",
@@ -268,7 +269,8 @@ export default function MilkProcessing() {
 
     createMutation.mutate({
       ...formData,
-      productType: activeTab,
+      productType: activeProductName,
+      unit: selectedProduct?.unit || formData.unit,
       milkType: selectedMilkType,
       materialsUsed: formData.addedMaterials,
       byProducts: formData.addedByProducts,
@@ -454,7 +456,7 @@ export default function MilkProcessing() {
                         input: {
                           endAdornment: (
                             <InputAdornment position="end">
-                              {watchedMaterialType === "Starter Culture" ? "g" : "Kg"}
+                              {selectedMaterial?.unit || "-"}
                             </InputAdornment>
                           ),
                         },
@@ -521,34 +523,17 @@ export default function MilkProcessing() {
                 <Stack direction={{ xs: "column", sm: "row" }} spacing={1} alignItems="stretch">
                   <FormControl fullWidth size="small">
                     <Select
-                      value={activeTab}
+                      value={activeProductName}
                       onChange={(e) => handleProductTypeChange(e.target.value)}
                       sx={{ borderRadius: "6px", fontSize: "13px", bgcolor: "#FFF" }}
                     >
-                      {productTabs.map((p) => (
-                        <MenuItem key={p} value={p} sx={{ fontSize: "13px" }}>
-                          {p}
+                      {processableProducts.map((product) => (
+                        <MenuItem key={`${product.product}-${product.unit}`} value={product.product} sx={{ fontSize: "13px" }}>
+                          {product.product} ({product.unit})
                         </MenuItem>
                       ))}
                     </Select>
                   </FormControl>
-                  <Button
-                    size="small"
-                    onClick={handleAddTab}
-                    startIcon={<AddIcon fontSize="small" />}
-                    sx={{
-                      textTransform: "none",
-                      fontSize: "12px",
-                      color: "#4B5563",
-                      border: "1px dashed #9CA3AF",
-                      borderRadius: "6px",
-                      minWidth: 120,
-                      whiteSpace: "nowrap",
-                      "&:hover": { bgcolor: "#F9FAFB" },
-                    }}
-                  >
-                    Add product
-                  </Button>
                 </Stack>
               </Box>
 
@@ -574,15 +559,8 @@ export default function MilkProcessing() {
                 </Grid>
 
                 <Grid size={{ xs: 5 }}>
-                  <Typography sx={{ fontSize: "12px", fontWeight: 600, color: "#374151", mb: 0.5 }}>
-                    Unit (L / Kg)
-                  </Typography>
-                  <SegmentedToggle
-                    options={["L", "Kg"]}
-                    value={watchedUnit || "L"}
-                    onChange={(val) => setValue("unit", val)}
-                    fullWidth
-                  />
+                  <input type="hidden" {...register("unit")} />
+                  <LockedField label="Unit" value={selectedProduct?.unit || watchedUnit || "-"} />
                 </Grid>
               </Grid>
 

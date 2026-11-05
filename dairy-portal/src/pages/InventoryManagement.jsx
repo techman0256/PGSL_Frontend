@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useForm } from "react-hook-form";
+import { useForm, Controller, useWatch } from "react-hook-form";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   Box,
@@ -22,7 +22,6 @@ import {
   TextField,
   MenuItem,
   Select,
-  FormControl,
   Snackbar,
   Alert,
   IconButton,
@@ -43,8 +42,10 @@ import RecordDetailsDialog from "../components/common/RecordDetailsDialog";
 import {
   getInventory,
   addRawMaterial,
+  addFinishedProduct,
 } from "../services/inventoryService";
 import { getErrorMessage } from "../utils/errorMessage";
+import { formatDisplayDateTime } from "../utils/dateTime";
 
 const TAB_OPTIONS = [
   { value: "finished", label: "Finished Products" },
@@ -87,16 +88,24 @@ export default function InventoryManagement() {
   const {
     register,
     handleSubmit,
+    control,
     reset,
     formState: { errors },
   } = useForm({
     defaultValues: {
       material: "",
+      materialId: "",
+      mode: "restock",
+      product: "",
       quantity: "",
       unit: "Kg",
       minThreshold: "5",
     },
   });
+
+  const watchedMaterialMode = useWatch({ control, name: "mode", defaultValue: "restock" });
+  const selectedMaterialId = useWatch({ control, name: "materialId", defaultValue: "" });
+  const selectedMaterial = rawMaterials.find((material) => material._id === selectedMaterialId);
 
   const addMaterialMutation = useMutation({
     mutationFn: addRawMaterial,
@@ -119,8 +128,52 @@ export default function InventoryManagement() {
     },
   });
 
+  const addProductMutation = useMutation({
+    mutationFn: addFinishedProduct,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["inventory"] });
+      setAddModalOpen(false);
+      reset();
+      setSnackbar({
+        open: true,
+        message: "Finished product added successfully!",
+        severity: "success",
+      });
+    },
+    onError: (err) => {
+      setSnackbar({
+        open: true,
+        message: getErrorMessage(err, "Failed to add finished product"),
+        severity: "error",
+      });
+    },
+  });
+
+  const openAddDialog = () => {
+    reset({
+      material: "",
+      materialId: "",
+      mode: activeTab === "raw" ? "restock" : "new",
+      product: "",
+      quantity: "",
+      unit: "Kg",
+      minThreshold: "5",
+    });
+    setAddModalOpen(true);
+  };
+
   const onAddSubmit = (formData) => {
-    addMaterialMutation.mutate(formData);
+    if (activeTab === "finished") {
+      addProductMutation.mutate(formData);
+      return;
+    }
+
+    addMaterialMutation.mutate({
+      ...formData,
+      mode: watchedMaterialMode,
+      material: watchedMaterialMode === "restock" ? selectedMaterial?.material : formData.material,
+      materialId: selectedMaterialId,
+    });
   };
 
   return (
@@ -263,7 +316,7 @@ export default function InventoryManagement() {
             variant="outlined"
             size="small"
             startIcon={<AddIcon />}
-            onClick={() => setAddModalOpen(true)}
+            onClick={openAddDialog}
             sx={{
               textTransform: "none",
               fontSize: "12px",
@@ -276,7 +329,7 @@ export default function InventoryManagement() {
               "&:hover": { borderColor: "#9CA3AF", bgcolor: "#F9FAFB" },
             }}
           >
-            Add Raw Material
+            {activeTab === "finished" ? "Add Finished Product" : "Add Raw Material"}
           </Button>
         </Box>
 
@@ -390,7 +443,7 @@ export default function InventoryManagement() {
                         {row.unit}
                       </TableCell>
                       <TableCell sx={{ fontSize: "13px", color: "#4B5563" }}>
-                        {row.lastUpdated}
+                        {formatDisplayDateTime(row.lastUpdated)}
                       </TableCell>
                       <TableCell align="right">
                         <Tooltip title="View Details">
@@ -457,7 +510,7 @@ export default function InventoryManagement() {
                         {row.unit}
                       </TableCell>
                       <TableCell sx={{ fontSize: "13px", color: "#4B5563" }}>
-                        {row.lastUsed}
+                        {formatDisplayDateTime(row.lastUsed)}
                       </TableCell>
                       <TableCell>
                         <Chip
@@ -501,63 +554,147 @@ export default function InventoryManagement() {
         </Box>
       </Paper>
 
-      {/* Add Raw Material Modal */}
+      {/* Inventory item modal */}
       <Dialog open={addModalOpen} onClose={() => setAddModalOpen(false)} maxWidth="xs" fullWidth>
         <DialogTitle sx={{ fontSize: "16px", fontWeight: 700, color: "#111827" }}>
-          Add / Restock Raw Material
+          {activeTab === "finished" ? "Add Finished Product" : "Add / Restock Raw Material"}
         </DialogTitle>
         <form onSubmit={handleSubmit(onAddSubmit)}>
           <DialogContent sx={{ py: 1.5 }}>
+            {activeTab === "finished" ? (
+              <>
+                <Box sx={{ mb: 2 }}>
+                  <Typography sx={{ fontSize: "12px", fontWeight: 600, color: "#374151", mb: 0.5 }}>
+                    Product Name
+                  </Typography>
+                  <TextField
+                    fullWidth
+                    size="small"
+                    placeholder="e.g. Flavoured Milk"
+                    {...register("product", { required: "Product name is required" })}
+                    error={Boolean(errors.product)}
+                    helperText={errors.product?.message}
+                    sx={{ "& .MuiOutlinedInput-root": { borderRadius: "6px" } }}
+                  />
+                </Box>
+                <Typography sx={{ fontSize: "12px", fontWeight: 600, color: "#374151", mb: 0.5 }}>
+                  Unit
+                </Typography>
+                <Controller
+                  name="unit"
+                  control={control}
+                  render={({ field }) => (
+                    <Select {...field} fullWidth size="small" sx={{ borderRadius: "6px", fontSize: "13px" }}>
+                      <MenuItem value="L">L</MenuItem>
+                      <MenuItem value="Kg">Kg</MenuItem>
+                      <MenuItem value="Units">Units</MenuItem>
+                    </Select>
+                  )}
+                />
+              </>
+            ) : (
+              <>
+                <Typography sx={{ fontSize: "12px", fontWeight: 600, color: "#374151", mb: 0.5 }}>
+                  Action
+                </Typography>
+                <Controller
+                  name="mode"
+                  control={control}
+                  render={({ field }) => (
+                    <Select
+                      {...field}
+                      fullWidth
+                      size="small"
+                      onChange={(event) => {
+                        field.onChange(event);
+                      }}
+                      sx={{ borderRadius: "6px", fontSize: "13px", mb: 2 }}
+                    >
+                      <MenuItem value="restock">Re-stock existing material</MenuItem>
+                      <MenuItem value="new">Add new material</MenuItem>
+                    </Select>
+                  )}
+                />
+                {watchedMaterialMode === "restock" ? (
+                  <Box sx={{ mb: 2 }}>
+                    <Typography sx={{ fontSize: "12px", fontWeight: 600, color: "#374151", mb: 0.5 }}>
+                      Material
+                    </Typography>
+                    <Controller
+                      name="materialId"
+                      control={control}
+                      rules={{ required: "Material is required" }}
+                      render={({ field }) => (
+                        <Select {...field} fullWidth size="small" displayEmpty error={Boolean(errors.materialId)} sx={{ borderRadius: "6px", fontSize: "13px" }}>
+                          <MenuItem value=""><em>Select material</em></MenuItem>
+                          {rawMaterials.map((material) => (
+                            <MenuItem key={material._id} value={material._id}>
+                              {material.material} ({material.unit})
+                            </MenuItem>
+                          ))}
+                        </Select>
+                      )}
+                    />
+                    {errors.materialId && <Typography sx={{ fontSize: "11px", color: "#D32F2F", mt: 0.5 }}>{errors.materialId.message}</Typography>}
+                  </Box>
+                ) : (
+                  <>
+                    <Box sx={{ mb: 2 }}>
+                      <Typography sx={{ fontSize: "12px", fontWeight: 600, color: "#374151", mb: 0.5 }}>
+                        Material Name
+                      </Typography>
+                      <TextField
+                        fullWidth
+                        size="small"
+                        placeholder="e.g. Citric Acid"
+                        {...register("material", { required: "Material name is required" })}
+                        error={Boolean(errors.material)}
+                        helperText={errors.material?.message}
+                        sx={{ "& .MuiOutlinedInput-root": { borderRadius: "6px" } }}
+                      />
+                    </Box>
+                    <Grid container spacing={2} sx={{ mb: 2 }}>
+                      <Grid size={{ xs: 7 }}>
+                        <Typography sx={{ fontSize: "12px", fontWeight: 600, color: "#374151", mb: 0.5 }}>Unit</Typography>
+                        <Controller
+                          name="unit"
+                          control={control}
+                          render={({ field }) => (
+                            <Select {...field} fullWidth size="small" sx={{ borderRadius: "6px", fontSize: "13px" }}>
+                              <MenuItem value="Kg">Kg</MenuItem>
+                              <MenuItem value="g">g</MenuItem>
+                              <MenuItem value="L">L</MenuItem>
+                              <MenuItem value="pcs">pcs</MenuItem>
+                            </Select>
+                          )}
+                        />
+                      </Grid>
+                      <Grid size={{ xs: 5 }}>
+                        <Typography sx={{ fontSize: "12px", fontWeight: 600, color: "#374151", mb: 0.5 }}>Low-stock alert</Typography>
+                        <TextField fullWidth size="small" type="number" {...register("minThreshold", { required: "Threshold is required", min: { value: 0, message: "Threshold cannot be negative" } })} error={Boolean(errors.minThreshold)} helperText={errors.minThreshold?.message} />
+                      </Grid>
+                    </Grid>
+                  </>
+                )}
+              </>
+            )}
+
             <Box sx={{ mb: 2 }}>
               <Typography sx={{ fontSize: "12px", fontWeight: 600, color: "#374151", mb: 0.5 }}>
-                Material Name
+                {activeTab === "finished" ? "Starting Quantity" : watchedMaterialMode === "restock" ? "Quantity to add" : "Starting Quantity"}
               </Typography>
               <TextField
                 fullWidth
                 size="small"
                 placeholder="e.g. Citric Acid"
-                {...register("material", { required: "Material name is required" })}
-                error={Boolean(errors.material)}
-                helperText={errors.material?.message}
+                type="number"
+                slotProps={{ htmlInput: { step: "0.01", min: 0 } }}
+                {...register("quantity", { required: "Quantity is required", min: { value: 0, message: "Quantity cannot be negative" } })}
+                error={Boolean(errors.quantity)}
+                helperText={errors.quantity?.message}
                 sx={{ "& .MuiOutlinedInput-root": { borderRadius: "6px" } }}
               />
             </Box>
-
-            <Grid container spacing={2}>
-              <Grid size={{ xs: 7 }}>
-                <Typography sx={{ fontSize: "12px", fontWeight: 600, color: "#374151", mb: 0.5 }}>
-                  Quantity
-                </Typography>
-                <TextField
-                  fullWidth
-                  size="small"
-                  type="number"
-                  slotProps={{ htmlInput: { step: "0.01" } }}
-                  placeholder="e.g. 10"
-                  {...register("quantity", { required: "Quantity is required" })}
-                  error={Boolean(errors.quantity)}
-                  helperText={errors.quantity?.message}
-                  sx={{ "& .MuiOutlinedInput-root": { borderRadius: "6px" } }}
-                />
-              </Grid>
-              <Grid size={{ xs: 5 }}>
-                <Typography sx={{ fontSize: "12px", fontWeight: 600, color: "#374151", mb: 0.5 }}>
-                  Unit
-                </Typography>
-                <FormControl fullWidth size="small">
-                  <Select
-                    defaultValue="Kg"
-                    {...register("unit")}
-                    sx={{ borderRadius: "6px", fontSize: "13px" }}
-                  >
-                    <MenuItem value="Kg">Kg</MenuItem>
-                    <MenuItem value="g">g</MenuItem>
-                    <MenuItem value="L">L</MenuItem>
-                    <MenuItem value="pcs">pcs</MenuItem>
-                  </Select>
-                </FormControl>
-              </Grid>
-            </Grid>
           </DialogContent>
 
           <DialogActions sx={{ px: 3, pb: 2.5 }}>
@@ -570,7 +707,7 @@ export default function InventoryManagement() {
             <Button
               type="submit"
               variant="contained"
-              disabled={addMaterialMutation.isPending}
+              disabled={addMaterialMutation.isPending || addProductMutation.isPending}
               sx={{
                 bgcolor: "#2D5A43",
                 "&:hover": { bgcolor: "#244835" },
@@ -579,7 +716,7 @@ export default function InventoryManagement() {
                 borderRadius: "6px",
               }}
             >
-              {addMaterialMutation.isPending ? "Adding..." : "Add Material"}
+              {addMaterialMutation.isPending || addProductMutation.isPending ? "Adding..." : activeTab === "finished" ? "Add Product" : watchedMaterialMode === "restock" ? "Re-stock Material" : "Add Material"}
             </Button>
           </DialogActions>
         </form>
