@@ -11,6 +11,7 @@ import LocalShippingOutlinedIcon from "@mui/icons-material/LocalShippingOutlined
 import SettingsOutlinedIcon from "@mui/icons-material/SettingsOutlined";
 import FormDatePicker from "../components/common/FormDatePicker";
 import { getDashboardSummary } from "../services/dashboardService";
+import { getErrorMessage } from "../utils/errorMessage";
 
 const today = () =>
   new Intl.DateTimeFormat("en-CA", {
@@ -222,9 +223,7 @@ export default function Dashboard() {
       .catch((requestError) => {
         if (active) {
           setError(
-            requestError.response?.data?.message ||
-              requestError.message ||
-              "Unable to load dashboard."
+            getErrorMessage(requestError, "Unable to load dashboard.")
           );
         }
       })

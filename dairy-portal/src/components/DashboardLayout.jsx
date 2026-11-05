@@ -19,6 +19,7 @@ import { useNavigate } from "react-router-dom";
 import Sidebar from "./Sidebar";
 import useAuth from "../context/useAuth";
 import { getRoleLabel } from "../auth/roleAccess";
+import { getErrorMessage } from "../utils/errorMessage";
 
 export default function DashboardLayout({ children }) {
   const { user, logout } = useAuth();
@@ -41,7 +42,7 @@ export default function DashboardLayout({ children }) {
       await logout();
       navigate("/");
     } catch (error) {
-      setLogoutError(error.response?.data?.message || "Could not sign out. Please try again.");
+      setLogoutError(getErrorMessage(error, "Could not sign out. Please try again."));
     }
   };
 

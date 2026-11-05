@@ -40,16 +40,12 @@ export const getInventory = async () => {
 };
 
 export const addRawMaterial = async (materialData) => {
-  const materialsResponse = await api.get(endpoints.inventory.rawMaterials);
-  const materials = getResponseData(materialsResponse)?.materials ?? [];
-  const existing = materials.find(
-    (material) => material.material.toLowerCase() === materialData.material.trim().toLowerCase()
-  );
-  const response = existing
-    ? await api.put(`${endpoints.inventory.rawMaterials}/${existing._id}`, {
-        addQuantity: Number(materialData.quantity),
-      })
-    : await api.post(endpoints.inventory.rawMaterials, {
+  const response =
+    materialData.mode === "restock"
+      ? await api.put(`${endpoints.inventory.rawMaterials}/${materialData.materialId}`, {
+          addQuantity: Number(materialData.quantity),
+        })
+      : await api.post(endpoints.inventory.rawMaterials, {
         material: materialData.material,
         availableQuantity: Number(materialData.quantity),
         unit: materialData.unit,
@@ -63,8 +59,28 @@ export const addRawMaterial = async (materialData) => {
   };
 };
 
+export const addFinishedProduct = async (productData) => {
+  const response = await api.post(endpoints.inventory.finishedProducts, {
+    product: productData.product.trim(),
+    quantity: Number(productData.quantity),
+    unit: productData.unit,
+  });
+  const data = getResponseData(response);
+
+  return {
+    data: data?.product ?? data,
+    backendPersisted: true,
+  };
+};
+
 export const getRawMaterials = async () => {
   const response = await api.get(endpoints.inventory.rawMaterials);
   const data = getResponseData(response);
   return data?.materials ?? data;
+};
+
+export const getFinishedProducts = async () => {
+  const response = await api.get(endpoints.inventory.finishedProducts);
+  const data = getResponseData(response);
+  return data?.products ?? data;
 };

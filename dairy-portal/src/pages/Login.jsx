@@ -18,6 +18,7 @@ import VisibilityOff from '@mui/icons-material/VisibilityOff'
 import api from '../api/axios'
 import endpoints from '../api/endpoints'
 import useAuth from '../context/useAuth'
+import { getErrorMessage } from '../utils/errorMessage'
 
 function Login() {
   const location = useLocation()
@@ -57,9 +58,10 @@ function Login() {
       navigate('/dashboard', { replace: true })
     } catch (err) {
       setError(
-        err.response?.data?.message ||
-          err.response?.data?.error ||
+        getErrorMessage(
+          err,
           'Login failed. Check your email and password and try again.'
+        )
       )
     } finally {
       setLoading(false)

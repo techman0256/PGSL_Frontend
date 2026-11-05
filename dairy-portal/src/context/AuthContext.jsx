@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import api from "../api/axios";
 import endpoints from "../api/endpoints";
 import AuthContext from "./authContextDef";
+import { getErrorMessage } from "../utils/errorMessage";
 
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
@@ -18,9 +19,7 @@ export function AuthProvider({ children }) {
       } catch (error) {
         if (isMounted && error.response?.status !== 401) {
           setAuthError(
-            error.response?.data?.message ||
-              error.message ||
-              "Could not verify your login session."
+            getErrorMessage(error, "Could not verify your login session.")
           );
         }
       } finally {

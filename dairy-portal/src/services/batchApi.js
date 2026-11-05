@@ -24,6 +24,7 @@ export const createBatch = async (batchData) => {
   return data?.batch ?? data;
 };
 
+// Retained for the disabled reception-edit workflow. Corrections currently use delete-and-re-add.
 export const updateBatch = async (id, batchData) => {
   const response = await api.put(
     `${endpoints.milkBatches}/${encodeURIComponent(id)}`,

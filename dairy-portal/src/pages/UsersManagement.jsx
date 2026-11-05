@@ -20,6 +20,7 @@ import {
 } from "@mui/material";
 import { createUser, getUsers, updateUserRole } from "../services/userService";
 import { ROLES, getRoleLabel } from "../auth/roleAccess";
+import { getErrorMessage } from "../utils/errorMessage";
 
 const initialForm = { name: "", email: "", password: "", role: "OPERATOR" };
 const ASSIGNABLE_ROLES = ROLES.filter((role) => ["ADMIN", "OPERATOR"].includes(role.value));
@@ -45,10 +46,7 @@ export default function UsersManagement() {
       setFeedback({
         severity: "error",
         message:
-          error.response?.data?.message ||
-          error.response?.data?.error ||
-          error.message ||
-          "Could not create the user.",
+          getErrorMessage(error, "Could not create the user."),
       });
     },
   });
@@ -63,9 +61,7 @@ export default function UsersManagement() {
       setFeedback({
         severity: "error",
         message:
-          error.response?.data?.message ||
-          error.message ||
-          "Could not update the user role.",
+          getErrorMessage(error, "Could not update the user role."),
       });
     },
   });
@@ -93,9 +89,7 @@ export default function UsersManagement() {
 
       {usersQuery.isError && (
         <Alert severity="error" sx={{ mb: 2 }}>
-          {usersQuery.error.response?.data?.message ||
-            usersQuery.error.message ||
-            "Could not load users."}
+          {getErrorMessage(usersQuery.error, "Could not load users.")}
         </Alert>
       )}
 

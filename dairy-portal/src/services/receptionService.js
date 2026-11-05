@@ -64,6 +64,7 @@ export const createReception = async (receptionData) => {
   };
 };
 
+// Retained for the disabled reception-edit workflow. Corrections currently use delete-and-re-add.
 export const updateReception = async ({ id, ...receptionData }) => {
   const batch = await updateBatch(id, {
     milkType: receptionData.milkType.toUpperCase(),
